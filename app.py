@@ -9,7 +9,7 @@ import io
 
 app = Flask(__name__)
 
-# --- ALTYAPI ---
+# --- ALTYAPI: TÜRKÇE KARAKTER DESTEĞİ ---
 try:
     pdfmetrics.registerFont(TTFont('ArialCustom', 'arial.ttf'))
     FONT_NAME = 'ArialCustom'
@@ -18,116 +18,105 @@ except:
 
 def udf_motoru(data):
     try:
+        # UDF'nin içindeki zlib bloğunu milimetrik bulma
         start_tag, end_tag = b"<content>", b"</content>"
         s, e = data.find(start_tag), data.find(end_tag)
-        if s == -1 or e == -1: return ["Hata: Geçersiz UDF formatı."]
-        xml_ham = zlib.decompress(data[s+len(start_tag):e])
+        if s == -1 or e == -1: return ["Hata: UDF yapısı çözülemedi."]
+        
+        # Zlib katmanını soy
+        xml_ham = zlib.decompress(data[s+9:e])
         root = ET.fromstring(xml_ham)
-        return [elem.text.strip() for elem in root.iter() if elem.text and elem.text.strip()]
-    except: return ["İşleme hatası oluştu."]
+        
+        # Tüm metin parçalarını hiyerarşik topla
+        lines = [elem.text.strip() for elem in root.iter() if elem.text and elem.text.strip()]
+        return lines if lines else ["Hata: Dosya içeriği boş."]
+    except Exception as ex:
+        return [f"İşleme Hatası: {str(ex)}"]
 
-# --- GELİŞMİŞ ARAYÜZ (SEO + PROGRESS BAR + KVKK) ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UDF Pro | Hızlı PDF, Word ve TXT Dönüştürücü</title>
-    <meta name="description" content="UYAP UDF dosyalarını saklamadan, güvenle PDF, Word ve TXT'ye dönüştürün. %100 KVKK uyumlu ve ücretsiz.">
+    <title>UDF Pro v10.0 | Ofis Gökçadır</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 450px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
-        .badge { background: #064e3b; color: #6ee7b7; padding: 15px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; line-height: 1.5; }
-        .progress-container { display: none; margin: 20px 0; background: #334155; border-radius: 10px; height: 10px; overflow: hidden; }
-        .progress-bar { width: 0%; height: 100%; background: #38bdf8; transition: width 0.3s; }
+        .badge { background: #064e3b; color: #6ee7b7; padding: 15px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; }
+        .progress-box { display: none; margin: 20px 0; }
+        .progress-bar { width: 100%; background: #334155; border-radius: 10px; height: 12px; position: relative; }
+        .progress-fill { width: 0%; height: 100%; background: #0ea5e9; border-radius: 10px; transition: width 0.2s; }
         .btn-group { display: grid; grid-template-columns: 1fr; gap: 12px; }
-        button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; font-size: 14px; }
+        button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; font-size: 14px; }
         .pdf { background: #0ea5e9; } .word { background: #2b579a; } .txt { background: #64748b; }
-        button:hover { filter: brightness(1.2); transform: scale(1.02); }
-        input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; cursor: pointer; }
-        .kvkk-link { margin-top: 25px; font-size: 11px; color: #94a3b8; cursor: pointer; text-decoration: underline; opacity: 0.7; }
+        input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h1 style="color:#38bdf8; margin:0 0 10px 0;">UDF PRO <span style="color:white">DÖNÜŞTÜRÜCÜ</span></h1>
+        <h1 style="color:#38bdf8; margin:0 0 10px 0;">UDF PRO <span style="color:white">v10.0</span></h1>
+        <div class="badge">🛡️ <b>KVKK VE GÜVENLİK:</b> Verileriniz kaydedilmez, sadece işlenir.</div>
         
-        <div class="badge">
-            <b>🛡️ GİZLİLİK VE VERİ GÜVENLİĞİ:</b><br>
-            Yüklediğiniz dosyalar sunucularımızda <u>asla saklanmaz</u>. Verileriniz sadece anlık olarak işlenir ve tarayıcınıza gönderildiği an bellekten silinir.
-        </div>
-
-        <form id="uploadForm" method="POST" enctype="multipart/form-data">
+        <form id="mainForm" method="POST" enctype="multipart/form-data">
             <input type="file" name="file" id="fileInput" accept=".udf" required>
             
-            <div id="progressArea" class="progress-container">
-                <div id="progressBar" class="progress-bar"></div>
+            <div id="progressContainer" class="progress-box">
+                <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+                <p id="status" style="font-size:12px; margin-top:8px; color:#38bdf8;">Hazırlanıyor...</p>
             </div>
-            <div id="statusText" style="font-size:12px; color:#38bdf8; margin-bottom:10px; display:none;">İşleniyor: %0</div>
 
             <div class="btn-group">
-                <button type="submit" name="mod" value="pdf" class="pdf">PRO PDF OLARAK DÖNÜŞTÜR</button>
-                <button type="submit" name="mod" value="word" class="word">PRO WORD (DOC) OLARAK DÖNÜŞTÜR</button>
-                <button type="submit" name="mod" value="txt" class="txt">HIZLI METİN (TEXT) OLARAK DÖNÜŞTÜR</button>
+                <button type="submit" name="mod" value="pdf" class="pdf" onclick="startProcess()">PRO PDF OLARAK DÖNÜŞTÜR</button>
+                <button type="submit" name="mod" value="word" class="word" onclick="startProcess()">PRO WORD (DOC) OLARAK DÖNÜŞTÜR</button>
+                <button type="submit" name="mod" value="txt" class="txt" onclick="startProcess()">HIZLI TEXT OLARAK DÖNÜŞTÜR</button>
             </div>
         </form>
-
-        <div class="kvkk-link" onclick="document.getElementById('kvkkModal').style.display='block'">KVKK Aydınlatma Metni</div>
-        <p style="font-size:10px; color:#475569; margin-top:20px">© 2026 FATİH MERT | Ofis Gökçadır - BURSA</p>
-    </div>
-
-    <div id="kvkkModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:100;">
-        <div style="background:#1e293b; width:80%; max-width:500px; margin:10% auto; padding:30px; border-radius:20px; border:1px solid #334155;">
-            <h3>KVKK Aydınlatma Metni</h3>
-            <p style="font-size:14px; line-height:1.6; color:#94a3b8;">
-                Bu uygulama, 6698 sayılı KVKK kapsamında veri sorumlusu sıfatı taşımadan çalışır. Yüklenen .udf uzantılı dosyalar herhangi bir veri tabanına kaydedilmez, depolanmaz ve üçüncü taraflarla paylaşılmaz. İşlem tamamen RAM (bellek) üzerinde anlık olarak gerçekleştirilir.
-            </p>
-            <button onclick="document.getElementById('kvkkModal').style.display='none'" style="background:#0ea5e9; width:100%;">ANLADIM</button>
-        </div>
+        <p style="font-size:10px; color:#475569; margin-top:30px">© 2026 FATİH MERT | BURSA</p>
     </div>
 
     <script>
-        document.getElementById('uploadForm').onsubmit = function() {
-            var progressBar = document.getElementById('progressBar');
-            var progressArea = document.getElementById('progressArea');
-            var statusText = document.getElementById('statusText');
+        function startProcess() {
+            if (document.getElementById('fileInput').files.length === 0) return;
+            document.getElementById('progressContainer').style.display = 'block';
+            let fill = document.getElementById('progressFill');
+            let status = document.getElementById('status');
+            let w = 0;
+            let interval = setInterval(() => {
+                w += (100 - w) * 0.1; // Logaritmik artış (asla 100'e takılmaz)
+                fill.style.width = w + '%';
+                status.innerText = 'Dönüştürülüyor: %' + Math.floor(w);
+                if (w > 99) clearInterval(interval);
+            }, 150);
             
-            progressArea.style.display = 'block';
-            statusText.style.display = 'block';
-            
-            var width = 0;
-            var interval = setInterval(function() {
-                if (width >= 95) {
-                    clearInterval(interval);
-                } else {
-                    width += 5;
-                    progressBar.style.width = width + '%';
-                    statusText.innerHTML = 'İşleniyor: %' + width;
-                }
-            }, 100);
-        };
+            // Dosya indikten sonra barı sıfırla (Kullanıcı yeni dosya atabilsin)
+            setTimeout(() => { 
+                status.innerText = 'Dosya İndiriliyor...';
+            }, 2000);
+        }
     </script>
 </body>
 </html>
 """
 
 @app.route('/', methods=['GET', 'POST'])
-def index():
+def handle():
     if request.method == 'GET':
         return render_template_string(HTML_UI)
     
-    f = request.files['file']
+    f = request.files.get('file')
     mod = request.form.get('mod')
-    lines = udf_motoru(f.read())
-    text = "\\n".join(lines)
+    
+    # DOSYA OKUMA VE HATA AYIKLAMA
+    raw_data = f.read()
+    lines = udf_motoru(raw_data)
+    
+    # "UDF içeriği bulunamadı" hatası alıyorsan, listeyi kontrol et
+    if not lines or "Hata" in lines[0]:
+        text = "Hata: Sectiginiz UDF dosyasi uyumlu degil veya bos."
+    else:
+        text = "\\n".join(lines)
 
-    # Dosya indirme başlığını "Soru Sormaya" zorlayacak şekilde ayarla
-    response_headers = {
-        'Content-Disposition': f'attachment; filename="donusturuldu_belge.{mod}"',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-    }
-
+    # FORMAT SEÇİMİ (KESİN AYRIM)
     if mod == 'txt':
         return send_file(io.BytesIO(text.encode('utf-8')), as_attachment=True, download_name="belge.txt", mimetype='text/plain')
     
