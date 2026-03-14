@@ -2,400 +2,231 @@ import os
 import zlib
 import zipfile
 import xml.etree.ElementTree as ET
-from flask import Flask, request, send_file, render_template_string, Response, jsonify
+from flask import Flask, request, send_file, render_template_string
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 import io
 import re
-from datetime import datetime
 
 app = Flask(__name__)
 
-# -------------------
-# ANALYTICS
-# -------------------
-
-analytics = {
-    "visits":0,
-    "conversions":0
-}
-
-# -------------------
-# SEO SLUGS
-# -------------------
-
-SEO_PAGES = [f"udf-converter-{i}" for i in range(1,101)]
-
-# -------------------
-# UDF PARSER
-# -------------------
+# -------------------------------
+# GÜÇLÜ UDF PARSER
+# -------------------------------
 
 def guclu_parser(data):
 
     try:
 
+        # ZIP kontrolü
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as z:
-
-                if "content.xml" in z.namelist():
-
-                    with z.open("content.xml") as f:
-                        return parse_xml_to_lines(f.read())
-
+                for name in z.namelist():
+                    if name.endswith(".xml"):
+                        with z.open(name) as f:
+                            return parse_xml_to_lines(f.read())
         except:
             pass
 
-        sigs=[b'\x78\x9c',b'\x78\xda',b'\x78\x01']
+        # ZLIB tarama
+        sigs = [b'\x78\x9c', b'\x78\xda', b'\x78\x01']
 
         for sig in sigs:
 
-            pos=data.find(sig)
+            pos = data.find(sig)
 
-            while pos!=-1:
+            while pos != -1:
 
-                for wbits in [zlib.MAX_WBITS,-zlib.MAX_WBITS]:
+                try:
+                    decompressed = zlib.decompress(data[pos:])
+                    if b"<" in decompressed:
+                        return parse_xml_to_lines(decompressed)
+                except:
+                    pass
 
-                    try:
+                pos = data.find(sig, pos + 1)
 
-                        decompressed=zlib.decompress(data[pos:],wbits)
+        return ["UDF içeriği bulunamadı"]
 
-                        if b'<' in decompressed:
-                            return parse_xml_to_lines(decompressed)
+    except Exception as e:
 
-                    except:
-                        pass
+        return [f"Hata: {str(e)}"]
 
-                pos=data.find(sig,pos+1)
-
-        return ["Belge formatı tanınamadı"]
-
-    except Exception as ex:
-
-        return [str(ex)]
 
 def parse_xml_to_lines(xml_content):
 
     try:
 
-        xml_str=xml_content.decode("utf-8",errors="ignore")
+        xml_str = xml_content.decode("utf-8", errors="ignore")
 
-        lines=re.findall(r'>([^<]{2,})<',xml_str)
+        root = ET.fromstring(xml_str)
 
-        lines=[l.strip() for l in lines if l.strip()]
+        lines = []
+
+        for elem in root.iter():
+
+            if elem.text:
+
+                t = elem.text.strip()
+
+                if len(t) > 1:
+                    lines.append(t)
 
         if not lines:
 
-            root=ET.fromstring(xml_str)
-
-            lines=[e.text.strip() for e in root.iter() if e.text and e.text.strip()]
+            clean = re.sub(r'<[^>]+>', ' ', xml_str)
+            return [clean]
 
         return lines
 
     except:
 
-        clean=re.sub(r'<[^>]+>',' ',xml_content.decode("utf-8",errors="ignore"))
+        clean = re.sub(r'<[^>]+>', ' ', xml_content.decode("utf-8", errors="ignore"))
 
         return [clean]
 
-# -------------------
-# UI
-# -------------------
 
-HTML="""
+# -------------------------------
+# SENİN ARAYÜZÜN (DEĞİŞMEDİ)
+# -------------------------------
+
+HTML_UI = """
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-
-<title>UDF Converter PRO</title>
-
-<meta name="description" content="UYAP UDF dosyalarını PDF Word veya TXT yapın">
-
-<style>
-
-body{
-font-family:Arial;
-background:#0f172a;
-color:white;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh
-}
-
-.box{
-background:#1e293b;
-padding:40px;
-border-radius:15px;
-width:500px;
-text-align:center
-}
-
-.drop{
-border:2px dashed #38bdf8;
-padding:30px;
-margin-bottom:20px;
-cursor:pointer
-}
-
-button{
-padding:12px;
-margin:5px;
-border:none;
-border-radius:6px;
-background:#38bdf8;
-color:white;
-cursor:pointer
-}
-
-.preview{
-background:#020617;
-padding:15px;
-height:200px;
-overflow:auto;
-margin-top:20px;
-font-size:12px
-}
-
-</style>
-
+    <meta charset="UTF-8">
+    <title>UDF Pro Elite v23.0 | Ofis Gökçadır</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 480px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+        .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 18px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; text-align: left; line-height: 1.6; }
+        .progress-container { display: none; margin: 20px 0; background: #334155; border-radius: 10px; height: 12px; overflow: hidden; }
+        .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #818cf8); transition: width 0.2s; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; opacity: 0.3; pointer-events: none; }
+        button.active { opacity: 1; pointer-events: auto; }
+        .pdf { background: #0ea5e9; grid-column: span 2; font-size: 16px; }
+        .word { background: #2b579a; } .txt { background: #64748b; }
+        button:hover { filter: brightness(1.2); transform: translateY(-2px); }
+        input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; cursor: pointer; }
+    </style>
 </head>
-
 <body>
-
-<div class="box">
-
-<h2>UDF Converter PRO</h2>
-
-<div class="drop" id="drop">
-
-Dosyayı buraya sürükle
-
-</div>
-
-<form method="POST" enctype="multipart/form-data" id="form">
-
-<input type="file" name="file" id="fileInput">
-
-<br><br>
-
-<button name="mod" value="preview">Preview</button>
-<button name="mod" value="pdf">PDF</button>
-<button name="mod" value="word">Word</button>
-<button name="mod" value="txt">Text</button>
-
-</form>
-
-<div class="preview" id="preview"></div>
-
-</div>
-
-<script>
-
-const drop=document.getElementById("drop")
-const input=document.getElementById("fileInput")
-
-drop.ondragover=e=>{
-e.preventDefault()
-}
-
-drop.ondrop=e=>{
-e.preventDefault()
-input.files=e.dataTransfer.files
-}
-
-</script>
-
+    <div class="box">
+        <h2 style="color:#38bdf8; margin:0 0 15px 0;">UDF PRO <span style="color:white">v23.0 ELITE</span></h2>
+        <div class="security-badge">
+            🔒 <b>Sayın kullanıcımız;</b> yüklediğiniz dosyalar hiçbir şekilde sunucularımızda depolanmaz. Anlık işlenir ve kalıcı olarak silinir.
+        </div>
+        <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
+            <input type="file" name="file" id="fIn" accept=".udf" required>
+            <label style="margin: 20px 0; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;">
+                <input type="checkbox" id="kvkk" onchange="toggleBtns()"> KVKK Aydınlatma Metnini okudum ve onaylıyorum.
+            </label>
+            <div id="pCont" class="progress-container"><div id="pBar" class="progress-bar"></div></div>
+            <div class="btn-group">
+                <button type="submit" name="mod" value="pdf" id="btnPdf" class="pdf" onclick="run()">PRO PDF OLARAK DÖNÜŞTÜR</button>
+                <button type="submit" name="mod" value="word" id="btnWord" class="word" onclick="run()">PRO WORD (DOC)</button>
+                <button type="submit" name="mod" value="txt" id="btnTxt" class="txt" onclick="run()">HIZLI TEXT (TXT)</button>
+            </div>
+        </form>
+        <p style="font-size:10px; color:#475569; margin-top:30px">© 2026 FATİH MERT | BURSA</p>
+    </div>
+    <script>
+        function toggleBtns() {
+            const isChecked = document.getElementById('kvkk').checked;
+            const btns = ['btnPdf', 'btnWord', 'btnTxt'];
+            btns.forEach(id => { 
+                const b = document.getElementById(id);
+                b.style.opacity = isChecked ? "1" : "0.3"; 
+                b.style.pointerEvents = isChecked ? "auto" : "none"; 
+            });
+        }
+        function run() {
+            document.getElementById('pCont').style.display = 'block';
+            let w = 0; let b = document.getElementById('pBar');
+            let i = setInterval(() => { w += (100 - w) * 0.12; b.style.width = w + '%'; if(w > 98) clearInterval(i); }, 100);
+        }
+    </script>
 </body>
 </html>
 """
 
-# -------------------
-# MAIN
-# -------------------
+# -------------------------------
+# ANA ROUTE
+# -------------------------------
 
-@app.route("/",methods=["GET","POST"])
+@app.route("/", methods=["GET","POST"])
 def index():
 
-    analytics["visits"]+=1
+    if request.method == "GET":
+        return render_template_string(HTML_UI)
 
-    if request.method=="GET":
+    file = request.files.get("file")
 
-        return render_template_string(HTML)
+    if not file:
+        return "Dosya yüklenmedi"
 
-    file=request.files["file"]
+    mod = request.form.get("mod")
 
-    mod=request.form.get("mod")
+    lines = guclu_parser(file.read())
 
-    lines=guclu_parser(file.read())
+    text = "\n".join(lines)
 
-    text="\n".join(lines)
-
-    if mod=="preview":
-
-        return "<br>".join(lines[:200])
-
-    if mod=="txt":
-
-        analytics["conversions"]+=1
+    if mod == "txt":
 
         return send_file(
+            io.BytesIO(text.encode("utf-8")),
+            as_attachment=True,
+            download_name="belge.txt",
+            mimetype="text/plain"
+        )
 
-        io.BytesIO(text.encode()),
-
-        as_attachment=True,
-
-        download_name="belge.txt",
-
-        mimetype="text/plain")
-
-    if mod=="word":
-
-        analytics["conversions"]+=1
+    if mod == "word":
 
         return send_file(
+            io.BytesIO(text.encode("utf-8")),
+            as_attachment=True,
+            download_name="belge.doc",
+            mimetype="application/msword"
+        )
 
-        io.BytesIO(text.encode()),
+    # PDF
+    buf = io.BytesIO()
 
-        as_attachment=True,
+    c = canvas.Canvas(buf, pagesize=A4)
 
-        download_name="belge.doc",
+    y = 800
 
-        mimetype="application/msword")
+    for line in lines:
 
-    if mod=="pdf":
+        c.drawString(50, y, line[:90])
 
-        analytics["conversions"]+=1
+        y -= 15
 
-        buf=io.BytesIO()
+        if y < 50:
 
-        c=canvas.Canvas(buf,pagesize=A4)
+            c.showPage()
 
-        y=800
+            y = 800
 
-        for line in lines:
+    c.save()
 
-            c.drawString(50,y,line)
+    buf.seek(0)
 
-            y-=15
-
-            if y<50:
-
-                c.showPage()
-
-                y=800
-
-        c.save()
-
-        buf.seek(0)
-
-        return send_file(
-
+    return send_file(
         buf,
-
         as_attachment=True,
-
         download_name="belge.pdf",
+        mimetype="application/pdf"
+    )
 
-        mimetype="application/pdf")
 
-# -------------------
-# ANALYTICS PANEL
-# -------------------
-
-@app.route("/analytics")
-
-def stats():
-
-    return jsonify(analytics)
-
-# -------------------
-# SEO PAGE
-# -------------------
-
-@app.route("/<slug>")
-
-def seo(slug):
-
-    if slug not in SEO_PAGES:
-
-        return "404",404
-
-    return f"""
-
-    <html>
-
-    <head>
-
-    <title>{slug}</title>
-
-    </head>
-
-    <body>
-
-    <h1>{slug}</h1>
-
-    <a href="/">UDF Converter</a>
-
-    </body>
-
-    </html>
-
-    """
-
-# -------------------
-# ROBOTS
-# -------------------
-
-@app.route("/robots.txt")
-
-def robots():
-
-    return Response("""
-
-User-agent: *
-
-Allow: /
-
-Sitemap: /sitemap.xml
-
-""",mimetype="text/plain")
-
-# -------------------
-# SITEMAP
-# -------------------
-
-@app.route("/sitemap.xml")
-
-def sitemap():
-
-    base="https://udf-to-pdf-production.up.railway.app"
-
-    urls=""
-
-    urls+=f"<url><loc>{base}</loc></url>"
-
-    for p in SEO_PAGES:
-
-        urls+=f"<url><loc>{base}/{p}</loc></url>"
-
-    xml=f"""
-
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
-{urls}
-
-</urlset>
-
-"""
-
-    return Response(xml,mimetype="text/xml")
-
-# -------------------
+# -------------------------------
 # SERVER
-# -------------------
+# -------------------------------
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
-    port=int(os.environ.get("PORT",8080))
+    port = int(os.environ.get("PORT",8080))
 
-    app.run(host="0.0.0.0",port=port)
+    app.run(host="0.0.0.0", port=port)
