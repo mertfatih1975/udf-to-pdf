@@ -9,6 +9,7 @@ import io
 import re
 from datetime import datetime
 import pytz
+import json
 
 app = Flask(__name__)
 
@@ -50,50 +51,90 @@ def parse_xml_to_lines(xml_content):
         return lines if lines else [re.sub(r'<[^>]+>', ' ', xml_str).strip()]
     except: return [re.sub(r'<[^>]+>', ' ', xml_content.decode("utf-8", errors="ignore")).strip()]
 
+# --- MOBİL UYGULAMA (PWA) GEREKSİNİMLERİ ---
+@app.route("/manifest.json")
+def manifest():
+    data = {
+        "name": "UDFTOPDF Dönüştürücü",
+        "short_name": "UDFTOPDF",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#0f172a",
+        "theme_color": "#0f172a",
+        "description": "UYAP UDF dosyalarınızı kolayca dönüştürün.",
+        "icons": [{"src": "/icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable"}]
+    }
+    return Response(json.dumps(data), mimetype="application/json")
+
+@app.route("/sw.js")
+def service_worker():
+    js = "self.addEventListener('install', (e) => { self.skipWaiting(); }); self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request)); });"
+    return Response(js, mimetype="application/javascript")
+
+@app.route("/icon.svg")
+def app_icon():
+    svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#1e293b"/><text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-size="100" font-weight="bold" font-family="Arial, sans-serif" fill="#38bdf8">UDF</text><text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" font-size="60" font-weight="bold" font-family="Arial, sans-serif" fill="#f8fafc">TO PDF</text></svg>"""
+    return Response(svg, mimetype="image/svg+xml")
+
 # --- UI TASARIMI ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta name="description" content="UDF dosyalarını ücretsiz PDF ve Word formatına dönüştürün. UYAP Doküman Formatı çevirici.">
     <title>UDFTOPDF | UYAP Dosya Dönüştürücü</title>
+    
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="apple-touch-icon" href="/icon.svg">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 30px 20px; }
-        .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 600px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); margin-bottom: 30px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px 15px; }
+        .box { background: #1e293b; padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 600px; border: 1px solid #334155; box-shadow: 0 15px 30px rgba(0,0,0,0.5); margin-bottom: 25px; box-sizing: border-box; }
+        
+        .mobile-install-badge { display: none; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 12px; border-radius: 10px; font-size: 13px; font-weight: bold; margin-bottom: 20px; border: 1px solid rgba(16, 185, 129, 0.3); }
+        @media (max-width: 600px) { .mobile-install-badge { display: block; } }
+
         .stats-badge { background: rgba(56, 189, 248, 0.1); color: #38bdf8; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: bold; margin-bottom: 25px; border: 1px solid rgba(56, 189, 248, 0.3); }
         .trust-points { text-align: left; margin-bottom: 25px; font-size: 14px; color: #94a3b8; display: grid; gap: 10px; }
         .trust-points span { display: flex; align-items: center; gap: 8px; }
         .trust-points b { color: #f8fafc; }
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; opacity: 0.3; pointer-events: none; }
+        .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 15px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; text-align: left; line-height: 1.5; }
+        
+        .btn-group { display: flex; flex-direction: column; gap: 10px; }
+        button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; opacity: 0.3; pointer-events: none; width: 100%; }
         button.active { opacity: 1; pointer-events: auto; }
-        .pdf { background: #0ea5e9; grid-column: span 2; font-size: 16px; }
+        .pdf { background: #0ea5e9; font-size: 16px; }
         .word { background: #2b579a; } .txt { background: #64748b; }
         input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; cursor: pointer; box-sizing: border-box; }
         
-        /* GÜVENLİK BADGE */
-        .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 15px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; text-align: left; line-height: 1.5; }
-        
-        /* BİLGİ PANELLERİ (SEO METİNLERİ) */
-        .info-panel { width: 600px; background: #111827; padding: 35px; border-radius: 20px; border: 1px solid #334155; margin-bottom: 20px; font-size: 15px; line-height: 1.7; color: #94a3b8; box-sizing: border-box; text-align: left; }
-        .info-panel h2 { color: #38bdf8; font-size: 20px; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
-        .info-panel h3 { color: #e2e8f0; font-size: 18px; margin-top: 25px; margin-bottom: 10px; }
+        .info-panel { width: 100%; max-width: 600px; background: #111827; padding: 25px; border-radius: 20px; border: 1px solid #334155; margin-bottom: 20px; font-size: 14px; line-height: 1.6; color: #94a3b8; box-sizing: border-box; text-align: left; }
+        .info-panel h2 { color: #38bdf8; font-size: 18px; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
+        .info-panel h3 { color: #e2e8f0; font-size: 16px; margin-top: 20px; margin-bottom: 10px; }
         .info-panel b { color: #f8fafc; }
         .info-panel ul, .info-panel ol { padding-left: 20px; margin-bottom: 20px; }
-        .info-panel li { margin-bottom: 8px; }
-        .info-panel p { margin-bottom: 15px; }
         
-        .footer { margin-top: 20px; text-align: center; color: #64748b; font-size: 12px; line-height: 1.8; }
-        .contact-area { margin-top: 25px; padding: 15px; border-top: 1px solid #334155; color: #94a3b8; font-size: 14px; }
+        .footer { margin-top: 10px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
+        .contact-area { margin-top: 20px; padding: 15px; border-top: 1px solid #334155; color: #94a3b8; font-size: 13px; }
         .contact-area b { color: #38bdf8; }
-        h1 { color:#38bdf8; font-size: 24px; line-height: 1.4; margin-bottom: 15px; }
+        h1 { color:#38bdf8; font-size: 20px; line-height: 1.4; margin-bottom: 15px; }
+
+        @media (min-width: 600px) {
+            .btn-group { display: grid; grid-template-columns: 1fr 1fr; }
+            .pdf { grid-column: span 2; }
+            h1 { font-size: 24px; }
+        }
     </style>
 </head>
 <body>
     <div class="box">
         <h1>Uyap Uzantılı Dosyalarınızı<br>Güvenle Dönüştürebilirsiniz</h1>
+        
+        <div class="mobile-install-badge">📲 Hızlı erişim için tarayıcı menüsünden "Ana Ekrana Ekle" diyerek uygulamamızı indirebilirsiniz.</div>
         
         <div class="stats-badge">🚀 Toplam 11.535 dönüştürme başarıyla tamamlandı.</div>
 
@@ -135,30 +176,23 @@ HTML_UI = """
         <h2>🔄 Nasıl Çalışır?</h2>
         <ol>
             <li><b>Dosyayı yükleyin:</b> Dönüştürmek istediğiniz dosyayı seçin.</li>
-            <li><b>Format seçin (PDF/Word):</b> İhtiyacınıza uygun çıktı formatını belirleyin.</li>
+            <li><b>Format seçin:</b> PDF, Word veya TXT seçeneklerinden birini belirleyin.</li>
             <li><b>Modu belirleyin:</b> Gerekli çeviri modunu ayarlayın.</li>
             <li><b>Dönüştür ve indirin:</b> İşlemi başlatın ve saniyeler içinde belgenizi alın.</li>
         </ol>
 
         <h2>⚖️ UDF Nedir? UYAP Doküman Formatı</h2>
-        <p>
-            <b>UDF dosyası (UYAP Doküman Formatı)</b>, Türkiye'de mahkemeler ve avukatlar tarafından UYAP (Ulusal Yargı Ağı Bilişim Sistemi) üzerinden oluşturulan belge formatıdır. Dava dilekçeleri, mahkeme kararları ve resmi hukuki yazışmalar <b>.udf uzantılı</b> dosyalar olarak kaydedilmektedir.
-        </p>
-        <p>
-            <b>UDF dosyası nasıl açılır?</b> sorusu avukatlar ve vatandaşlar tarafından sıkça sorulmaktadır. Standart belgelerden farklı olduğundan Adobe Reader veya Microsoft Word ile doğrudan açılamaz. Bu <b>UDF çevirici</b> araç, UDF dosyalarınızı PDF formatına dönüştürerek erişilebilir hale getirir.
-        </p>
+        <p><b>UDF dosyası (UYAP Doküman Formatı)</b>, Türkiye'de mahkemeler ve avukatlar tarafından UYAP (Ulusal Yargı Ağı Bilişim Sistemi) üzerinden oluşturulan belge formatıdır. Dava dilekçeleri, mahkeme kararları ve resmi hukuki yazışmalar <b>.udf uzantılı</b> dosyalar olarak kaydedilmektedir.</p>
+        <p><b>UDF dosyası nasıl açılır?</b> sorusu avukatlar ve vatandaşlar tarafından sıkça sorulmaktadır. Standart belgelerden farklı olduğundan Adobe Reader veya Microsoft Word ile doğrudan açılamaz. Bu <b>UDF çevirici</b> araç, UDF dosyalarınızı PDF formatına dönüştürerek erişilebilir hale getirir.</p>
 
         <h3>📄 UDF PDF Dönüştürme – Nasıl Yapılır?</h3>
-        <p>UDF'den PDF'ye dönüştürme işlemi bu araç ile oldukça kolaydır:</p>
         <ul>
             <li>UYAP üzerinden indirdiğiniz <b>.udf dosyasını</b> yükleme alanına sürükleyin.</li>
             <li><b>PDF formatını</b> seçin.</li>
             <li>Düzenlenebilir metin veya görsel mod tercihini yapın.</li>
             <li>Dönüştür butonuna tıklayın ve PDF'yi indirin.</li>
         </ul>
-        <p>
-            <b>UDF dönüştürücü</b> aracımız, avukatlar, hakimler, savcılar ve adli işlerle ilgilenen her kullanıcı için tasarlanmıştır. <b>UYAP UDF belge dönüştürme</b> işlemi ücretsiz ve kayıtsız kullanılabilir.
-        </p>
+        <p><b>UDF dönüştürücü</b> aracımız, avukatlar, hakimler, savcılar ve adli işlerle ilgilenen her kullanıcı için tasarlanmıştır. <b>UYAP UDF belge dönüştürme</b> işlemi ücretsiz ve kayıtsız kullanılabilir.</p>
     </div>
 
     <div class="footer">
@@ -167,6 +201,13 @@ HTML_UI = """
     </div>
 
     <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                    console.log('PWA aktif.');
+                }).catch(function(err) {});
+            });
+        }
         function toggleBtns() {
             const isChecked = document.getElementById('kvkk').checked;
             ['btnPdf', 'btnWord', 'btnTxt'].forEach(id => {
