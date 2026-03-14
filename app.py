@@ -10,7 +10,7 @@ import io
 
 app = Flask(__name__)
 
-# --- ALTYAPI: FONT DESTEĞİ ---
+# --- ALTYAPI: FONT ---
 try:
     pdfmetrics.registerFont(TTFont('ArialCustom', 'arial.ttf'))
     FONT_NAME = 'ArialCustom'
@@ -21,66 +21,63 @@ def udf_motoru(content):
     try:
         s = content.find(b"<content>") + 9
         e = content.find(b"</content>")
-        if s < 9 or e == -1: return ["Hata: UDF içeriği bulunamadı."]
+        if s < 9 or e == -1: return ["Hata: UDF icerigi bulunamadi."]
         xml = zlib.decompress(content[s:e])
         root = ET.fromstring(xml)
         return [elem.text.strip() for elem in root.iter() if elem.text and elem.text.strip()]
-    except Exception as ex:
-        return [f"Dönüştürme Hatası: {str(ex)}"]
+    except:
+        return ["Donusturme sirasinda teknik bir hata olustu."]
 
-HTML_UI = """
+HTML_KODU = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>UDF Pro v5.0 | Güvenli Sistem</title>
+    <title>UDF Pro v6.0 | Kesin Cozum</title>
     <style>
         body { font-family: sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 420px; border: 1px solid #334155; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-        .secure-badge { background: #064e3b; color: #6ee7b7; padding: 12px; border-radius: 10px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; }
-        .btn-group { display: flex; justify-content: space-between; gap: 10px; }
-        button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; flex: 1; transition: 0.3s; color: white; }
+        .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 400px; border: 1px solid #334155; }
+        button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 45%; color: white; margin-top: 10px; }
         .pro { background: #0ea5e9; }
         .fast { background: #64748b; }
-        input[type="file"] { margin-bottom: 25px; color: #94a3b8; width: 100%; }
+        input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h2 style="margin-top:0">UDF PRO <span style="color:#0ea5e9">ULTIMATE</span></h2>
-        <div class="secure-badge">🛡️ Güvenli Altyapı: Dosyalar RAM'de işlenir.</div>
+        <h2>UDF PRO GUVENLI</h2>
+        <p style="font-size:12px; color:#6ee7b7">🛡️ Altyapi: RAM-Only Processing</p>
         <form method="POST" enctype="multipart/form-data">
             <input type="file" name="file" accept=".udf" required>
-            <div class="btn-group">
-                <button type="submit" name="mode" value="fast" class="fast">HIZLI (TXT)</button>
-                <button type="submit" name="mode" value="pro" class="pro">PRO (PDF)</button>
+            <div style="display:flex; justify-content: space-between;">
+                <button type="submit" name="islem" value="txt" class="fast">HIZLI (TXT)</button>
+                <button type="submit" name="islem" value="pdf" class="pro">PRO (PDF)</button>
             </div>
         </form>
-        <p style="font-size:10px; color:#475569; margin-top:25px">FATİH MERT | BURSA 2026</p>
+        <p style="font-size:10px; color:#475569; margin-top:20px">FATIH MERT | 2026</p>
     </div>
 </body>
 </html>
 """
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    # Sayfaya ilk girişte (GET) arayüzü göster
+# BUTUN KAPIYI HERKESE ACTIK
+@app.route('/', methods=['GET', 'POST', 'PUT'])
+def home():
     if request.method == 'GET':
-        return render_template_string(HTML_UI)
+        return render_template_string(HTML_KODU)
     
-    # Butona basıldığında (POST) dönüştürme yap
-    if 'file' not in request.files: return "Dosya yok", 400
+    if 'file' not in request.files:
+        return "Dosya secilmedi", 400
+    
     file = request.files['file']
-    mode = request.form.get('mode') # Hangi butona basıldı?
-    
+    mod = request.form.get('islem')
     lines = udf_motoru(file.read())
     
-    if mode == 'fast':
+    if mod == 'txt':
         text = "\\n".join(lines)
         buf = io.BytesIO(text.encode('utf-8'))
-        return send_file(buf, as_attachment=True, download_name="ozet.txt", mimetype='text/plain')
-    
-    else: # PRO Modu (PDF)
+        return send_file(buf, as_attachment=True, download_name="belge.txt", mimetype='text/plain')
+    else:
         buf = io.BytesIO()
         c = canvas.Canvas(buf, pagesize=A4)
         y = 800
@@ -90,14 +87,11 @@ def index():
                 c.showPage()
                 c.setFont(FONT_NAME, 10)
                 y = 800
-            # Basit satır kısıtlaması
-            text_line = line if len(line) < 95 else line[:92] + "..."
-            c.drawString(50, y, text_line)
+            c.drawString(50, y, line[:95])
             y -= 15
         c.save()
         buf.seek(0)
-        return send_file(buf, as_attachment=True, download_name="profesyonel.pdf", mimetype='application/pdf')
+        return send_file(buf, as_attachment=True, download_name="belge.pdf", mimetype='application/pdf')
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
