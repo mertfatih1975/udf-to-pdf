@@ -9,66 +9,62 @@ import io
 app = Flask(__name__)
 
 # --- SEO YOLLARI ---
-SEO_PAGES = ["udf-to-pdf", "udf-to-word", "udf-to-txt", "uyap-udf-donusturucu", "udf-dosya-ac"]
+SEO_PAGES = ["udf-to-pdf", "udf-to-word", "udf-to-txt", "uyap-udf-donusturucu"]
 
-# --- SENİN VERDİĞİN GÜÇLÜ PARSER (ESNEK YAPI) ---
+# --- GÜÇLÜ PARSER (ESNEK YAPI) ---
 def guclu_parser(data):
     try:
-        # 1. Strateji: Standart Tag Arama
         s, e = data.find(b"<content>"), data.find(b"</content>")
         if s != -1 and e != -1:
             raw_xml = zlib.decompress(data[s+9:e])
         else:
-            # 2. Strateji: Tag yoksa zlib başlangıcını (78 9C) yakala
             zlib_start = data.find(b'\x78\x9c')
             if zlib_start != -1:
                 raw_xml = zlib.decompress(data[zlib_start:])
             else: return ["Hata: UDF verisi ayrıştırılamadı."]
-
         root = ET.fromstring(raw_xml)
         return [elem.text.strip() for elem in root.iter() if elem.text and elem.text.strip()]
     except Exception as ex:
         return [f"Parser Hatası: {str(ex)}"]
 
-# --- GÖRSEL VE FONKSİYONEL ARAYÜZ ---
+# --- PROFESYONEL ARAYÜZ ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UDF Pro v15.0 | Bursa Ofis Gökçadır</title>
+    <title>UDF Pro Elite | Güvenli UYAP Dönüştürme Sistemi</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
         .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 480px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
-        .badge { background: #064e3b; color: #6ee7b7; padding: 12px; border-radius: 10px; font-size: 13px; margin-bottom: 20px; border: 1px solid #059669; }
-        .preview-box { display: none; background: #0f172a; border: 1px solid #334155; padding: 15px; border-radius: 10px; margin: 15px 0; text-align: left; font-size: 12px; color: #94a3b8; max-height: 100px; overflow: hidden; }
-        .progress-container { display: none; margin: 20px 0; background: #334155; border-radius: 10px; height: 12px; overflow: hidden; position: relative; }
+        .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 18px; border-radius: 12px; font-size: 13.5px; margin-bottom: 25px; border: 1px solid #059669; line-height: 1.6; text-align: left; }
+        .progress-container { display: none; margin: 20px 0; background: #334155; border-radius: 10px; height: 12px; overflow: hidden; }
         .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #818cf8); transition: width 0.2s; }
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; font-size: 14px; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: 600; color: white; transition: 0.3s; font-size: 14px; }
         .pdf { background: #0ea5e9; grid-column: span 2; font-size: 16px; }
         .word { background: #2b579a; } .txt { background: #64748b; }
         button:hover { filter: brightness(1.2); transform: translateY(-2px); }
         input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; cursor: pointer; border: 1px dashed #475569; padding: 15px; border-radius: 10px; }
-        .kvkk-note { margin-top: 25px; font-size: 11px; color: #64748b; text-decoration: underline; cursor: pointer; }
+        .kvkk-link { margin-top: 30px; font-size: 12px; color: #94a3b8; text-decoration: underline; cursor: pointer; opacity: 0.8; }
+        .kvkk-link:hover { color: #38bdf8; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h2 style="color:#38bdf8; margin:0 0 10px 0;">UDF PRO <span style="color:white">MASTER</span></h2>
-        <div class="badge">🛡️ <b>GÜVENLİK:</b> Dosyalar saklanmaz, sadece RAM'de işlenir.</div>
+        <h2 style="color:#38bdf8; margin:0 0 15px 0; letter-spacing: 1px;">UDF PRO <span style="color:white">ELITE</span></h2>
+        
+        <div class="security-badge">
+            🔒 <b>Kurumsal Güvenlik Protokolü:</b><br>
+            Sistemimiz "Sıfır Kayıt" prensibiyle çalışmaktadır. Yüklenen belgeler uçtan uca şifreli olarak işlenir, sunucu üzerinde depolanmaz ve işlem tamamlandığında bellekten (RAM) kalıcı olarak silinir.
+        </div>
         
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
-            <input type="file" name="file" id="fIn" accept=".udf" required onchange="handleFile()">
+            <input type="file" name="file" id="fIn" accept=".udf" required>
             
-            <div id="pView" class="preview-box">
-                <b>📄 Belge Önizleme:</b><br>
-                <span id="pText">Dosya hazır...</span>
-            </div>
-
             <div id="pCont" class="progress-container"><div id="pBar" class="progress-bar"></div></div>
-            <p id="pPerc" style="display:none; color:#38bdf8; font-size:12px; margin-bottom:10px;">%0 Hazırlanıyor...</p>
+            <p id="pPerc" style="display:none; color:#38bdf8; font-size:12px; margin-bottom:15px; font-weight:bold;">%0 İşleniyor...</p>
 
             <div class="btn-group">
                 <button type="submit" name="mod" value="pdf" class="pdf" onclick="run()">PRO PDF OLARAK DÖNÜŞTÜR</button>
@@ -77,26 +73,32 @@ HTML_UI = """
             </div>
         </form>
 
-        <div class="kvkk-note" onclick="alert('KVKK AYDINLATMA: Verileriniz sunucuda yedeklenmez. İşlem bittiği an bellekten (RAM) kalıcı olarak silinir.')">KVKK ve Veri Güvenliği Aydınlatma Metni</div>
+        <div class="kvkk-link" onclick="document.getElementById('kvkkModal').style.display='block'">KVKK Aydınlatma Metni ve Gizlilik Bildirimi</div>
         <p style="font-size:10px; color:#475569; margin-top:25px">© 2026 FATİH MERT | BURSA | Ofis Gökçadır</p>
     </div>
 
-    <script>
-        function handleFile() {
-            const f = document.getElementById('fIn').files[0];
-            if (f) {
-                document.getElementById('pView').style.display = 'block';
-                document.getElementById('pText').innerText = "Belge: " + f.name + " (" + (f.size/1024).toFixed(1) + " KB)";
-            }
-        }
+    <div id="kvkkModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; overflow-y: auto;">
+        <div style="background:#1e293b; width:90%; max-width:600px; margin:50px auto; padding:35px; border-radius:20px; border:1px solid #334155; text-align: left;">
+            <h3 style="color:#38bdf8; margin-top:0;">KVKK Aydınlatma Metni</h3>
+            <p style="font-size:13px; line-height:1.7; color:#cbd5e1;">
+                6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, bu platform üzerinden gerçekleştirilen işlemler "anlık veri işleme" statüsündedir. <br><br>
+                <b>1. Veri İşleme Amacı:</b> Sadece kullanıcı tarafından yüklenen .udf formatındaki belgelerin PDF, Word veya TXT formatına dönüştürülmesi.<br>
+                <b>2. Depolama:</b> İşlenen veriler hiçbir veri tabanına veya fiziksel sürücüye kaydedilmez. İşlem tamamlandığında oturum sonlandırılır.<br>
+                <b>3. Veri Aktarımı:</b> Verileriniz üçüncü şahıs veya kurumlarla paylaşılmaz.<br>
+                <b>4. Kullanıcı Onayı:</b> Belge yükleyerek bu gizlilik protokolünü kabul etmiş sayılırsınız.
+            </p>
+            <button onclick="document.getElementById('kvkkModal').style.display='none'" style="background:#0ea5e9; width:100%; margin-top:20px; padding:12px;">KAPAT</button>
+        </div>
+    </div>
 
+    <script>
         function run() {
             if(document.getElementById('fIn').files.length == 0) return;
             document.getElementById('pCont').style.display = 'block';
             document.getElementById('pPerc').style.display = 'block';
             let w = 0;
             let int = setInterval(() => {
-                w += (100 - w) * 0.15;
+                w += (100 - w) * 0.12;
                 document.getElementById('pBar').style.width = w + '%';
                 document.getElementById('pPerc').innerText = '%' + Math.floor(w) + ' İşleniyor...';
                 if(w > 98) clearInterval(int);
@@ -132,13 +134,6 @@ def index():
         c.save()
         buf.seek(0)
         return send_file(buf, as_attachment=True, download_name="belge.pdf", mimetype='application/pdf')
-
-@app.route("/sitemap.xml")
-def sitemap():
-    base = "https://udf-to-pdf-production.up.railway.app"
-    xml = f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>{base}/</loc></url>'
-    for p in SEO_PAGES: xml += f"<url><loc>{base}/{p}</loc></url>"
-    return Response(xml + "</urlset>", mimetype="text/xml")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
