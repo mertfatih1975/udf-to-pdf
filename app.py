@@ -13,7 +13,7 @@ HTML_INTERFACE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UDF İşlemci v2.0</title>
+    <title>UDF Islemci v2.0</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #0f172a; color: #f8fafc; }
         .container { background: #1e293b; padding: 40px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); text-align: center; width: 450px; border: 1px solid #334155; }
@@ -31,8 +31,8 @@ HTML_INTERFACE = """
 </head>
 <body>
     <div class="container">
-        <h2>UDF İşlemci</h2>
-        <p>Lütfen dönüştürmek istediğiniz UDF dosyasını seçin</p>
+        <h2>UDF Islemci</h2>
+        <p>Lutfen donusturmek istediginiz UDF dosyasini secin</p>
         <form id="udfForm" method="post" enctype="multipart/form-data">
             <input type="file" name="file" accept=".udf" required>
             <div class="button-group">
@@ -40,9 +40,8 @@ HTML_INTERFACE = """
                 <button type="submit" onclick="setEndpoint('/convert/pro')" class="btn-pro">PRO (PDF)</button>
             </div>
         </form>
-        <div class="footer">FATİH MERT | Ofis Gökçadır İş Merkezi</div>
+        <div class="footer">FATIH MERT | Ofis Gokcadir Is Merkezi</div>
     </div>
-
     <script>
         function setEndpoint(path) {
             document.getElementById('udfForm').action = path;
@@ -61,7 +60,7 @@ def extract_udf_text(udf_content):
         root = ET.fromstring(xml_data)
         return "".join([c.text for c in root.iter('content') if c.text])
     except:
-        return "Dosya okunurken hata oluştu."
+        return "Dosya okunurken hata olustu."
 
 @app.route('/')
 def index():
@@ -71,7 +70,6 @@ def index():
 def fast_convert():
     file = request.files['file']
     text = extract_udf_text(file.read())
-    # Hızlı seçenekte doğrudan .txt dosyası verir
     buffer = io.BytesIO(text.encode('utf-8'))
     return send_file(buffer, as_attachment=True, download_name="ozet.txt", mimetype='text/plain')
 
@@ -79,7 +77,6 @@ def fast_convert():
 def pro_convert():
     file = request.files['file']
     text = extract_udf_text(file.read())
-    
     buffer = io.BytesIO()
     p = canvas.Canvas(buffer)
     t = p.beginText(50, 800)
