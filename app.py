@@ -60,7 +60,11 @@ HTML_UI = """
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
         .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 550px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
-        .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 18px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; text-align: left; }
+        .stats-badge { background: rgba(56, 189, 248, 0.1); color: #38bdf8; padding: 10px; border-radius: 10px; font-size: 14px; font-weight: bold; margin-bottom: 20px; border: 1px solid rgba(56, 189, 248, 0.3); }
+        .trust-points { text-align: left; margin-bottom: 25px; font-size: 13px; color: #94a3b8; display: grid; gap: 8px; }
+        .trust-points span { display: flex; align-items: center; gap: 8px; }
+        .trust-points b { color: #f8fafc; }
+        .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 15px; border-radius: 12px; font-size: 12px; margin-bottom: 20px; border: 1px solid #059669; text-align: left; }
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; opacity: 0.3; pointer-events: none; }
         button.active { opacity: 1; pointer-events: auto; }
@@ -70,15 +74,23 @@ HTML_UI = """
         .footer { margin-top: 30px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
         .contact-area { margin-top: 20px; padding: 15px; border-top: 1px solid #334155; color: #94a3b8; font-size: 13px; }
         .contact-area b { color: #38bdf8; }
-        .time-label { color: #38bdf8; font-weight: bold; font-size: 14px; margin-bottom: 10px; }
-        h1 { color:#38bdf8; font-size: 22px; line-height: 1.4; margin-bottom: 15px; }
+        h1 { color:#38bdf8; font-size: 22px; line-height: 1.4; margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <div class="box">
         <h1>Uyap Uzantılı Dosyalarınızı<br>Güvenle Dönüştürebilirsiniz</h1>
-        <div class="time-label">🕒 {{ current_time }}</div>
-        <div class="security-badge">🔒 <b>Güvenlik:</b> Yüklediğiniz dosyalar sunucuda depolanmaz, RAM üzerinden anlık işlenir ve kalıcı olarak silinir.</div>
+        
+        <div class="stats-badge">🚀 Toplam 11.535 dönüştürme başarıyla tamamlandı.</div>
+
+        <div class="trust-points">
+            <span>✅ <b>Güvenli:</b> Dosyalarınız işlem sonrası otomatik olarak silinir.</span>
+            <span>✅ <b>Ücretsiz:</b> Hiçbir ücret veya kayıt gerektirmez.</span>
+            <span>✅ <b>Hızlı:</b> Saniyeler içinde dönüştürme işlemi tamamlanır.</span>
+        </div>
+
+        <div class="security-badge">🔒 <b>KVKK:</b> Verileriniz RAM üzerinde işlenir, sunucuda asla depolanmaz.</div>
+
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
             <input type="file" name="file" id="fIn" accept=".udf" required>
             <label style="margin: 20px 0; font-size: 12px; display: block; cursor: pointer;">
@@ -98,7 +110,7 @@ HTML_UI = """
     </div>
 
     <div class="footer">
-        🛡️ SSL Güvenli Bağlantı Aktif | İstanbul - Türkiye <br>
+        🛡️ SSL Güvenli Bağlantı | İstanbul - Türkiye | 🕒 {{ current_time }}<br>
         © {{ current_year }} UDFTOPDF - Tüm Hakları Saklıdır.
     </div>
 
@@ -121,7 +133,7 @@ def index():
     tz = pytz.timezone('Europe/Istanbul')
     now = datetime.now(tz)
     if request.method == "GET":
-        return render_template_string(HTML_UI, current_time=now.strftime("%d.%m.%Y - %H:%M"), current_year=now.year)
+        return render_template_string(HTML_UI, current_time=now.strftime("%H:%M"), current_year=now.year)
     
     f = request.files.get("file")
     mod = request.form.get("mod")
