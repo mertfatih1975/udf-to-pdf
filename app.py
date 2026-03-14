@@ -10,15 +10,10 @@ import re
 
 app = Flask(__name__)
 
-# -------------------------------
-# GÜÇLÜ UDF PARSER
-# -------------------------------
-
+# --- GÜÇLÜ UDF PARSER ---
 def guclu_parser(data):
-
     try:
-
-        # ZIP kontrolü
+        # ZIP kontrolü (Gönderdiğin deneme 1.udf yapısı)
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as z:
                 for name in z.namelist():
@@ -28,74 +23,59 @@ def guclu_parser(data):
         except:
             pass
 
-        # ZLIB tarama
+        # ZLIB tarama (Eski nesil UDF yapısı)
         sigs = [b'\x78\x9c', b'\x78\xda', b'\x78\x01']
-
         for sig in sigs:
-
             pos = data.find(sig)
-
             while pos != -1:
-
                 try:
                     decompressed = zlib.decompress(data[pos:])
                     if b"<" in decompressed:
                         return parse_xml_to_lines(decompressed)
                 except:
                     pass
-
                 pos = data.find(sig, pos + 1)
 
-        return ["UDF içeriği bulunamadı"]
-
+        return ["UDF içeriği bulunamadı veya şifreli."]
     except Exception as e:
-
         return [f"Hata: {str(e)}"]
 
-
 def parse_xml_to_lines(xml_content):
-
     try:
-
+        # Karakter kodlama hatalarını ve gizli kutucuk karakterlerini temizle
         xml_str = xml_content.decode("utf-8", errors="ignore")
+        
+        # Kutucuklara sebep olan görünmez karakterleri (non-breaking spaces vb.) temizle
+        xml_str = xml_str.replace('\xa0', ' ').replace('\u200b', '').replace('\r', '')
 
         root = ET.fromstring(xml_str)
-
         lines = []
-
         for elem in root.iter():
-
             if elem.text:
-
                 t = elem.text.strip()
-
+                # Gereksiz kısa metinleri ve boşlukları atla
                 if len(t) > 1:
-                    lines.append(t)
+                    # Satır içindeki ekstra boşlukları/kutucukları temizle
+                    clean_line = " ".join(t.split())
+                    lines.append(clean_line)
 
         if not lines:
-
+            # XML ağacı oluşmazsa etiketleri manuel ayıkla
             clean = re.sub(r'<[^>]+>', ' ', xml_str)
-            return [clean]
+            return [clean.strip()]
 
         return lines
-
     except:
-
         clean = re.sub(r'<[^>]+>', ' ', xml_content.decode("utf-8", errors="ignore"))
+        return [clean.strip()]
 
-        return [clean]
-
-
-# -------------------------------
-# SENİN ARAYÜZÜN (DEĞİŞMEDİ)
-# -------------------------------
-
+# --- KURUMSAL ARAYÜZ (GÜVENLİK ODAKLI) ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>UDF Pro Elite v23.0 | Ofis Gökçadır</title>
+    <title>UDF Pro Elite v24.0 | Ofis Gökçadır</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
         .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 480px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
@@ -113,7 +93,7 @@ HTML_UI = """
 </head>
 <body>
     <div class="box">
-        <h2 style="color:#38bdf8; margin:0 0 15px 0;">UDF PRO <span style="color:white">v23.0 ELITE</span></h2>
+        <h2 style="color:#38bdf8; margin:0 0 15px 0;">UDF PRO <span style="color:white">v24.0 ELITE</span></h2>
         <div class="security-badge">
             🔒 <b>Sayın kullanıcımız;</b> yüklediğiniz dosyalar hiçbir şekilde sunucularımızda depolanmaz. Anlık işlenir ve kalıcı olarak silinir.
         </div>
@@ -142,6 +122,7 @@ HTML_UI = """
             });
         }
         function run() {
+            if(document.getElementById('fIn').files.length == 0) return;
             document.getElementById('pCont').style.display = 'block';
             let w = 0; let b = document.getElementById('pBar');
             let i = setInterval(() => { w += (100 - w) * 0.12; b.style.width = w + '%'; if(w > 98) clearInterval(i); }, 100);
@@ -151,82 +132,38 @@ HTML_UI = """
 </html>
 """
 
-# -------------------------------
-# ANA ROUTE
-# -------------------------------
-
 @app.route("/", methods=["GET","POST"])
 def index():
-
     if request.method == "GET":
         return render_template_string(HTML_UI)
-
+    
     file = request.files.get("file")
-
-    if not file:
-        return "Dosya yüklenmedi"
-
+    if not file: return "Dosya yüklenmedi"
+    
     mod = request.form.get("mod")
-
     lines = guclu_parser(file.read())
-
     text = "\n".join(lines)
 
     if mod == "txt":
-
-        return send_file(
-            io.BytesIO(text.encode("utf-8")),
-            as_attachment=True,
-            download_name="belge.txt",
-            mimetype="text/plain"
-        )
-
+        return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.txt", mimetype="text/plain")
+    
     if mod == "word":
+        return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.doc", mimetype="application/msword")
 
-        return send_file(
-            io.BytesIO(text.encode("utf-8")),
-            as_attachment=True,
-            download_name="belge.doc",
-            mimetype="application/msword"
-        )
-
-    # PDF
+    # PDF MODU
     buf = io.BytesIO()
-
     c = canvas.Canvas(buf, pagesize=A4)
-
     y = 800
-
     for line in lines:
-
-        c.drawString(50, y, line[:90])
-
-        y -= 15
-
+        # Sayfa dışına taşmayı önlemek için satırı böl
         if y < 50:
-
             c.showPage()
-
             y = 800
-
+        c.drawString(50, y, line[:90])
+        y -= 15
     c.save()
-
     buf.seek(0)
-
-    return send_file(
-        buf,
-        as_attachment=True,
-        download_name="belge.pdf",
-        mimetype="application/pdf"
-    )
-
-
-# -------------------------------
-# SERVER
-# -------------------------------
+    return send_file(buf, as_attachment=True, download_name="belge.pdf", mimetype="application/pdf")
 
 if __name__ == "__main__":
-
-    port = int(os.environ.get("PORT",8080))
-
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
