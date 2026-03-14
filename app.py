@@ -8,13 +8,10 @@ import io
 
 app = Flask(__name__)
 
-# --- ULTRA-FLEXIBLE PARSER (HATA ÇÖZÜCÜ) ---
+# --- ULTRA-FLEXIBLE PARSER ---
 def guclu_parser(data):
     try:
-        # Denenecek zlib başlangıç imzaları (Standart, Max, Hızlı Sıkıştırma varyasyonları)
         signatures = [b'\x78\x9c', b'\x78\xda', b'\x78\x01', b'\x78\x5e']
-        
-        # 1. STRATEJİ: Klasik etiket arama (<content>...</content>)
         s, e = data.find(b"<content>"), data.find(b"</content>")
         if s != -1 and e != -1:
             try:
@@ -22,19 +19,15 @@ def guclu_parser(data):
                 return parse_xml_to_lines(raw_xml)
             except: pass
 
-        # 2. STRATEJİ: Etiketsiz çözüm (Zlib imza avcısı)
         for sig in signatures:
             z_start = data.find(sig)
             while z_start != -1:
                 try:
-                    # İmzadan itibaren veriyi açmayı dene
                     raw_xml = zlib.decompress(data[z_start:])
                     return parse_xml_to_lines(raw_xml)
                 except:
-                    # Başarısız olursa bir sonraki aynı imzayı ara
                     z_start = data.find(sig, z_start + 1)
-                    
-        return ["HATA: Dosya içeriği şifreli (E-İmzalı kilitli) veya hasarlı olduğu için açılamıyor."]
+        return ["HATA: Dosya içeriği şifreli veya hasarlı."]
     except Exception as ex:
         return [f"TEKNİK HATA: {str(ex)}"]
 
@@ -43,17 +36,18 @@ def parse_xml_to_lines(xml_content):
         root = ET.fromstring(xml_content)
         lines = [elem.text.strip() for elem in root.iter() if elem.text and elem.text.strip()]
         return lines if lines else ["Belge metni boş."]
-    except:
-        return ["HATA: XML ayrıştırma hatası."]
+    except: return ["HATA: XML ayrıştırma hatası."]
 
-# --- KURUMSAL ARAYÜZ (HTML & CSS & JS) ---
+# --- KURUMSAL ARAYÜZ (v19.1) ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UDF Pro Elite | Güvenli Dönüştürme Sistemi</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>UDF Pro Elite | Bursa</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
         .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 480px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
@@ -66,7 +60,7 @@ HTML_UI = """
         .pdf { background: #0ea5e9; grid-column: span 2; font-size: 16px; }
         .word { background: #2b579a; } .txt { background: #64748b; }
         button:hover { filter: brightness(1.2); transform: translateY(-2px); }
-        input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; cursor: pointer; border: 1px dashed #475569; padding: 15px; border-radius: 10px; }
+        input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; }
         .kvkk-check { margin: 20px 0; font-size: 12.5px; color: #cbd5e1; display: flex; align-items: flex-start; justify-content: center; gap: 10px; cursor: pointer; text-align: left; }
         .kvkk-link { color: #38bdf8; text-decoration: underline; font-weight: 600; }
     </style>
@@ -74,32 +68,25 @@ HTML_UI = """
 <body>
     <div class="box">
         <h2 style="color:#38bdf8; margin:0 0 15px 0;">UDF PRO <span style="color:white">ELITE</span></h2>
-        
         <div class="security-badge">
             🔒 <b>Güvenlik Bildirimi:</b><br>
             Sayın kullanıcımız; yüklemiş olduğunuz dosyalar hiçbir şekilde sunucularımızda depolanmaz. Verileriniz sadece anlık olarak işlenir ve işlem tamamlandığında kalıcı olarak silinir.
         </div>
-        
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
             <input type="file" name="file" id="fIn" accept=".udf" required>
-            
             <label class="kvkk-check">
                 <input type="checkbox" id="kvkkBox" onchange="toggleBtns()" style="margin-top: 4px;">
-                <span><a href="#" class="kvkk-link" onclick="alert('KVKK: Verileriniz 6698 sayılı kanun uyarınca sadece anlık dönüştürme amacıyla RAM üzerinde işlenir ve asla kayıt altında tutulmaz.')">KVKK Aydınlatma Metnini</a> okudum ve onaylıyorum.</span>
+                <span><a href="#" class="kvkk-link" onclick="alert('KVKK: Verileriniz 6698 sayılı kanun uyarınca sadece anlık dönüştürme amacıyla RAM üzerinde işlenir.')">KVKK Aydınlatma Metnini</a> okudum ve onaylıyorum.</span>
             </label>
-
             <div id="pCont" class="progress-container"><div id="pBar" class="progress-bar"></div></div>
-            <p id="pPerc" style="display:none; color:#38bdf8; font-size:12px; margin-bottom:15px; font-weight:bold;">%0 İşleniyor...</p>
-
             <div class="btn-group">
                 <button type="submit" name="mod" value="pdf" id="btnPdf" class="pdf" onclick="run()">PRO PDF OLARAK DÖNÜŞTÜR</button>
                 <button type="submit" name="mod" value="word" id="btnWord" class="word" onclick="run()">PRO WORD (DOC)</button>
                 <button type="submit" name="mod" value="txt" id="btnTxt" class="txt" onclick="run()">HIZLI TEXT (TXT)</button>
             </div>
         </form>
-        <p style="font-size:10px; color:#475569; margin-top:30px">© 2026 FATİH MERT | BURSA | Ofis Gökçadır</p>
+        <p style="font-size:10px; color:#475569; margin-top:30px">© 2026 FATİH MERT | BURSA</p>
     </div>
-
     <script>
         function toggleBtns() {
             const isChecked = document.getElementById('kvkkBox').checked;
@@ -110,15 +97,11 @@ HTML_UI = """
             });
         }
         function run() {
-            if(document.getElementById('fIn').files.length == 0) return;
             document.getElementById('pCont').style.display = 'block';
-            document.getElementById('pPerc').style.display = 'block';
-            let w = 0;
-            let int = setInterval(() => {
-                w += (100 - w) * 0.12;
-                document.getElementById('pBar').style.width = w + '%';
-                document.getElementById('pPerc').innerText = '%' + Math.floor(w) + ' İşleniyor...';
-                if(w > 98) clearInterval(int);
+            let w = 0; let b = document.getElementById('pBar');
+            let i = setInterval(() => {
+                w += (100 - w) * 0.12; b.style.width = w + '%';
+                if(w > 98) clearInterval(i);
             }, 100);
         }
     </script>
@@ -129,15 +112,17 @@ HTML_UI = """
 @app.route("/", methods=["GET","POST"])
 def index():
     if request.method == "GET":
-        return render_template_string(HTML_UI)
+        # Yanıt başlıklarına cache engelleme ekliyoruz
+        resp = Response(render_template_string(HTML_UI))
+        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        return resp
     
     f = request.files.get("file")
     mod = request.form.get("mod")
     lines = guclu_parser(f.read())
 
-    # HATA DURUMU
-    if "HATA" in lines[0] or "TEKNİK" in lines[0]:
-        return f"<body style='background:#0f172a; color:white; font-family:sans-serif; text-align:center; padding-top:100px;'><h2>⚠️ {lines[0]}</h2><p>Lütfen dosyanın e-imzalı kilitli olmadığından emin olun.</p><br><a href='/' style='color:#38bdf8; text-decoration:none; border:1px solid #38bdf8; padding:10px 20px; border-radius:5px;'>Geri Dön</a></body>", 400
+    if "HATA" in lines[0]:
+        return f"<body style='background:#0f172a; color:white; text-align:center; padding-top:100px;'><h2>⚠️ {lines[0]}</h2><a href='/' style='color:#38bdf8;'>Geri Dön</a></body>", 400
 
     text = "\n".join(lines)
     if mod == "txt":
