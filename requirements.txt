@@ -2,3 +2,5 @@ Flask
 gunicorn
 reportlab
 pytz
+PyPDF2
+python-docx
