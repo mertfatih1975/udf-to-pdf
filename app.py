@@ -58,20 +58,26 @@ HTML_UI = """
     <meta charset="UTF-8">
     <title>UDFTOPDF | UYAP Dosya Dönüştürücü</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 550px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 600px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); margin-bottom: 20px; }
         .stats-badge { background: rgba(56, 189, 248, 0.1); color: #38bdf8; padding: 10px; border-radius: 10px; font-size: 14px; font-weight: bold; margin-bottom: 20px; border: 1px solid rgba(56, 189, 248, 0.3); }
         .trust-points { text-align: left; margin-bottom: 25px; font-size: 13px; color: #94a3b8; display: grid; gap: 8px; }
         .trust-points span { display: flex; align-items: center; gap: 8px; }
         .trust-points b { color: #f8fafc; }
-        .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 15px; border-radius: 12px; font-size: 12px; margin-bottom: 20px; border: 1px solid #059669; text-align: left; }
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; opacity: 0.3; pointer-events: none; }
         button.active { opacity: 1; pointer-events: auto; }
         .pdf { background: #0ea5e9; grid-column: span 2; font-size: 16px; }
         .word { background: #2b579a; } .txt { background: #64748b; }
         input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; cursor: pointer; }
-        .footer { margin-top: 30px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
+        
+        /* BİLGİ PANELLERİ */
+        .info-panel { width: 600px; background: #111827; padding: 30px; border-radius: 20px; border: 1px solid #334155; margin-bottom: 20px; font-size: 14px; line-height: 1.6; color: #94a3b8; }
+        .info-panel h2 { color: #38bdf8; font-size: 18px; margin-top: 0; display: flex; align-items: center; gap: 10px; }
+        .info-panel b { color: #f8fafc; }
+        .info-panel ul { padding-left: 20px; }
+        
+        .footer { margin-top: 10px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
         .contact-area { margin-top: 20px; padding: 15px; border-top: 1px solid #334155; color: #94a3b8; font-size: 13px; }
         .contact-area b { color: #38bdf8; }
         h1 { color:#38bdf8; font-size: 22px; line-height: 1.4; margin-bottom: 10px; }
@@ -88,8 +94,6 @@ HTML_UI = """
             <span>✅ <b>Ücretsiz:</b> Hiçbir ücret veya kayıt gerektirmez.</span>
             <span>✅ <b>Hızlı:</b> Saniyeler içinde dönüştürme işlemi tamamlanır.</span>
         </div>
-
-        <div class="security-badge">🔒 <b>KVKK:</b> Verileriniz RAM üzerinde işlenir, sunucuda asla depolanmaz.</div>
 
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
             <input type="file" name="file" id="fIn" accept=".udf" required>
@@ -109,6 +113,33 @@ HTML_UI = """
         </div>
     </div>
 
+    <div class="info-panel">
+        <h2>📋 Desteklenen Formatlar</h2>
+        <ul>
+            <li><b>Giriş:</b> .udf (UYAP Doküman Formatı)</li>
+            <li><b>Çıkış:</b> PDF (Editable veya Visual), Word, TXT</li>
+        </ul>
+        
+        <h2>🔄 Nasıl Çalışır?</h2>
+        <ol>
+            <li><b>Dosyayı yükleyin:</b> UYAP'tan indirdiğiniz .udf dosyasını seçin.</li>
+            <li><b>Format seçin:</b> PDF, Word veya TXT seçeneklerinden birini belirleyin.</li>
+            <li><b>Dönüştür ve İndirin:</b> İşlem saniyeler içinde tamamlanır ve dosyanız hazır olur.</li>
+        </ol>
+    </div>
+
+    <div class="info-panel">
+        <h2>⚖️ UDF Nedir? UYAP Doküman Formatı</h2>
+        <p>
+            <b>UDF dosyası (UYAP Doküman Formatı)</b>, Türkiye'de mahkemeler ve avukatlar tarafından UYAP üzerinden oluşturulan resmi belge formatıdır. 
+            Dava dilekçeleri ve mahkeme kararları gibi tüm hukuki yazışmalar bu formatla kaydedilir.
+        </p>
+        <p>
+            <b>UDF dosyası nasıl açılır?</b> Standart bir dosya olmadığından Word veya Adobe Reader ile doğrudan açılamaz. 
+            Bu <b>UDF çevirici</b> araç, dosyalarınızı herkesin açabileceği PDF formatına saniyeler içinde dönüştürür.
+        </p>
+    </div>
+
     <div class="footer">
         🛡️ SSL Güvenli Bağlantı | İstanbul - Türkiye | 🕒 {{ current_time }}<br>
         © {{ current_year }} UDFTOPDF - Tüm Hakları Saklıdır.
@@ -126,32 +157,3 @@ HTML_UI = """
     </script>
 </body>
 </html>
-"""
-
-@app.route("/", methods=["GET","POST"])
-def index():
-    tz = pytz.timezone('Europe/Istanbul')
-    now = datetime.now(tz)
-    if request.method == "GET":
-        return render_template_string(HTML_UI, current_time=now.strftime("%H:%M"), current_year=now.year)
-    
-    f = request.files.get("file")
-    mod = request.form.get("mod")
-    lines = guclu_parser(f.read())
-    text = "\n".join(lines)
-    
-    if mod == "txt": return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.txt", mimetype="text/plain")
-    if mod == "word": return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.doc", mimetype="application/msword")
-    
-    buf = io.BytesIO()
-    c = canvas.Canvas(buf, pagesize=A4)
-    y = 800
-    c.setFont("Helvetica", 11)
-    for line in lines:
-        if y < 50: c.showPage(); c.setFont("Helvetica", 11); y = 800
-        c.drawString(50, y, line[:95]); y -= 18
-    c.save(); buf.seek(0)
-    return send_file(buf, as_attachment=True, download_name="belge.pdf", mimetype="application/pdf")
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
