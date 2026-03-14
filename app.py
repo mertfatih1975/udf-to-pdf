@@ -68,6 +68,8 @@ HTML_UI = """
         .word { background: #2b579a; } .txt { background: #64748b; }
         input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; cursor: pointer; }
         .footer { margin-top: 30px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
+        .contact-area { margin-top: 20px; padding: 15px; border-top: 1px solid #334155; color: #94a3b8; font-size: 13px; }
+        .contact-area b { color: #38bdf8; }
         .time-label { color: #38bdf8; font-weight: bold; font-size: 14px; margin-bottom: 10px; }
         h1 { color:#38bdf8; font-size: 22px; line-height: 1.4; margin-bottom: 15px; }
     </style>
@@ -88,11 +90,18 @@ HTML_UI = """
                 <button type="submit" name="mod" value="txt" id="btnTxt" class="txt">TXT YAP</button>
             </div>
         </form>
+        
+        <div class="contact-area">
+            🤝 <b>Reklam ve İşbirliği:</b><br>
+            mertfatih1975@gmail.com | 0532 764 16 61
+        </div>
     </div>
+
     <div class="footer">
         🛡️ SSL Güvenli Bağlantı Aktif | İstanbul - Türkiye <br>
         © {{ current_year }} UDFTOPDF - Tüm Hakları Saklıdır.
     </div>
+
     <script>
         function toggleBtns() {
             const isChecked = document.getElementById('kvkk').checked;
