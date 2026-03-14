@@ -68,10 +68,14 @@ def parse_xml_to_lines(xml_content):
         return lines if lines else [re.sub(r'<[^>]+>', ' ', xml_str).strip()]
     except: return [re.sub(r'<[^>]+>', ' ', xml_content.decode("utf-8", errors="ignore")).strip()]
 
+# --- GOOGLE DOĞRULAMA (DOSYA YÖNTEMİ) ---
+@app.route("/googleaNpaoi0xHA1z8efKdzI2QOY1UkRhJpx7MURlOgyd9uE.html")
+def google_verify_file():
+    return "google-site-verification: googleaNpaoi0xHA1z8efKdzI2QOY1UkRhJpx7MURlOgyd9uE.html"
+
 # --- SEO: SITEMAP & ROBOTS.TXT ---
 @app.route("/robots.txt")
 def robots():
-    # Arama motorlarına sitemizi tarama izni veriyoruz ve haritanın yerini gösteriyoruz
     host = request.host_url.rstrip('/')
     txt = f"User-agent: *\nAllow: /\nSitemap: {host}/sitemap.xml"
     return Response(txt, mimetype="text/plain")
@@ -349,7 +353,6 @@ def index():
 # Sitemap vb. SEO sayfalarını yakalayan ek kural:
 @app.route("/<path:path>")
 def catch_all(path):
-    # Eğer doğrudan ulaşılan sayfa sitemap listesindeyse ana sayfayı göster (SEO için)
     if path in SEO_PAGES:
         tz = pytz.timezone('Europe/Istanbul')
         now = datetime.now(tz)
