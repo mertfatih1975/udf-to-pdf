@@ -132,4 +132,15 @@ def index():
     elif mod == "word":
         return send_file(io.BytesIO(text.encode('utf-8')), as_attachment=True, download_name="belge.doc", mimetype='application/msword')
     else: # PDF
-        buf = io.BytesIO
+        buf = io.BytesIO()
+        c = canvas.Canvas(buf, pagesize=A4)
+        y = 800
+        for line in lines:
+            if y < 50: c.showPage(); y = 800
+            c.drawString(50, y, line[:95])
+            y -= 15
+        c.save(); buf.seek(0)
+        return send_file(buf, as_attachment=True, download_name="belge.pdf", mimetype='application/pdf')
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
