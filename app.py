@@ -13,9 +13,6 @@ import json
 
 app = Flask(__name__)
 
-# --- SEO SAYFALARI (Sitemap İçin) ---
-SEO_PAGES = ["udf-dosyasi-pdf-yapma", "udf-to-pdf", "uyap-udf-converter", "udf-dosyasi-acma", "udf-to-word", "jpeg-to-udf"]
-
 # --- SAYAÇ SİSTEMİ ---
 SAYAC_DOSYASI = "sayac.txt"
 
@@ -36,6 +33,54 @@ def increment_sayac():
     except:
         pass
     return count
+
+# --- PROGRAMATİK SEO ÜRETİCİSİ (SENİN KODUN) ---
+SEO_KEYWORDS = [
+    "udf to pdf", "udf dosyası açma", "uyap udf converter", "udf to word", 
+    "udf to txt", "udf to jpg", "udf converter", "uyap belge açma", 
+    "udf pdf çevirici", "udf dönüştürücü", "uyap udf açma", "udf file converter", 
+    "udf viewer", "udf document converter", "udf to docx", "udf online converter", 
+    "uyap dosya dönüştürücü", "udf belge açma", "udf belge çevirme", "udf belge görüntüleme"
+]
+
+def generate_seo_pages():
+    pages = {}
+    # Linklerin sorunsuz çalışması için Türkçe karakter düzeltici
+    tr_map = {"ç": "c", "ğ": "g", "ı": "i", "ö": "o", "ş": "s", "ü": "u"}
+    
+    for kw in SEO_KEYWORDS:
+        # Link oluşturma (Slug)
+        slug = kw.lower()
+        for tr, eng in tr_map.items():
+            slug = slug.replace(tr, eng)
+        slug = slug.replace(" ", "-")
+
+        title = f"{kw.upper()} | Ücretsiz UDF Dönüştürücü"
+        desc = f"{kw} işlemini ücretsiz yapın. UDF dosyalarını PDF, Word veya TXT formatına saniyeler içinde dönüştürün."
+
+        content = f"""
+        <h2>🔍 {kw.title()} Nasıl Yapılır?</h2>
+        <p>UDF dosyaları genellikle UYAP sisteminde oluşturulan belge formatlarıdır. Bu dosyaları standart programlarla açmak mümkün olmadığından özel bir dönüştürücü gerekir.</p>
+        <p>Bu güvenli araç sayesinde <b>{kw}</b> işlemini saniyeler içinde, bilgisayarınıza veya telefonunuza hiçbir program kurmadan gerçekleştirebilirsiniz. Dosyanızı yükleyin ve anında istediğiniz formata çevirin.</p>
+        
+        <h3>⚙️ Adım Adım {kw.title()} İşlemi</h3>
+        <ol>
+            <li>Yukarıdaki yükleme alanına dosyanızı seçin veya sürükleyin.</li>
+            <li>Dönüştürmek istediğiniz formatı (PDF, Word, TXT) belirleyen butona tıklayın.</li>
+            <li>İşlenen belgenizi anında cihazınıza indirin.</li>
+        </ol>
+        <p><i>Sistemimiz, Türkiye'de en hızlı ve güvenli UDF çevirme araçlarından biridir. Belgeleriniz işlem sonrası sunuculardan kalıcı olarak silinir.</i></p>
+        """
+
+        pages[slug] = {
+            "title": title,
+            "desc": desc,
+            "content": content
+        }
+    return pages
+
+# SEO sayfalarını uygulama başlarken bir kere üretiyoruz:
+SEO_GENERATED = generate_seo_pages()
 
 # --- UDF PARSER ---
 def guclu_parser(data):
@@ -84,8 +129,9 @@ def robots():
 def sitemap():
     host = request.host_url.rstrip('/')
     urls = f"<url><loc>{host}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>"
-    for p in SEO_PAGES: 
-        urls += f"<url><loc>{host}/{p}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>"
+    # Otomatik üretilen sayfaları site haritasına ekliyoruz
+    for slug in SEO_GENERATED.keys(): 
+        urls += f"<url><loc>{host}/{slug}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>"
     return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', mimetype="text/xml")
 
 # --- MOBİL UYGULAMA (PWA) ---
@@ -113,7 +159,7 @@ def app_icon():
     svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#1e293b"/><text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-size="100" font-weight="bold" font-family="Arial, sans-serif" fill="#38bdf8">UDF</text><text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" font-size="60" font-weight="bold" font-family="Arial, sans-serif" fill="#f8fafc">TO PDF</text></svg>"""
     return Response(svg, mimetype="image/svg+xml")
 
-# --- UI TASARIMI (ZENGİN SONUÇLAR İÇİN GÜNCELLENDİ) ---
+# --- UI TASARIMI ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
@@ -124,9 +170,10 @@ HTML_UI = """
 
     <title>{{ page_title }}</title>
     <meta name="description" content="{{ page_desc }}">
+    
+    <meta name="keywords" content="udf to pdf, udf dosyası açma, uyap udf converter, udf to word, udf to txt, udf to jpg, udf converter, uyap belge açma, udf pdf çevirici, udf dönüştürücü, uyap udf açma, udf file converter, udf viewer, udf document converter, udf to docx, udf online converter, uyap dosya dönüştürücü, udf belge açma, udf belge çevirme, udf belge görüntüleme">
 
     <link rel="canonical" href="{{ host }}{{ request.path }}"/>
-
     <meta property="og:title" content="{{ page_title }}">
     <meta property="og:description" content="{{ page_desc }}">
     <meta property="og:type" content="website">
@@ -161,7 +208,6 @@ HTML_UI = """
     </script>
 
     <meta name="google-site-verification" content="aNpaoi0xHA1z8efKdzI2QOY1UkRhJpx7MURlOgyd9uE" />
-
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0f172a">
     <link rel="apple-touch-icon" href="/icon.svg">
@@ -266,6 +312,12 @@ HTML_UI = """
         </div>
     </div>
 
+    {% if seo_content %}
+    <div class="info-panel">
+        {{ seo_content|safe }}
+    </div>
+    {% endif %}
+
     <div class="info-panel">
         <h2>📋 Desteklenen Formatlar</h2>
         <ul>
@@ -361,7 +413,8 @@ def index():
             page_title=page_title,
             page_desc=page_desc,
             host=host,
-            request=request
+            request=request,
+            seo_content="" 
         ))
         resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         return resp
@@ -426,25 +479,16 @@ def index():
     c.save(); buf.seek(0)
     return send_file(buf, as_attachment=True, download_name="belge.pdf", mimetype="application/pdf")
 
+# SENİN YAZDIĞIN ÖZEL SEO YAKALAYICISI:
 @app.route("/<path:path>")
 def catch_all(path):
-    if path in SEO_PAGES:
+    if path in SEO_GENERATED:
+        page = SEO_GENERATED[path]
+        
         tz = pytz.timezone('Europe/Istanbul')
         now = datetime.now(tz)
         sayac = get_sayac()
         formatted_sayac = f"{sayac:,}".replace(',', '.')
-        
-        titles = {
-            "udf-dosyasi-pdf-yapma": "UDF Dosyası PDF Yapma | UDFTOPDF",
-            "udf-to-pdf": "UDF to PDF Converter | Hızlı ve Ücretsiz",
-            "uyap-udf-converter": "UYAP UDF Çevirici | UDFTOPDF",
-            "udf-dosyasi-acma": "UDF Dosyası Açma Rehberi ve Dönüştürücü",
-            "udf-to-word": "UDF to Word | UYAP Formatını DOCX Yapma",
-            "jpeg-to-udf": "JPEG to UDF | Fotoğrafı UYAP Formatına Çevir"
-        }
-        
-        page_title = titles.get(path, "UDFTOPDF | UYAP Dosya Dönüştürücü")
-        page_desc = f"{page_title} işlemi için en hızlı ve güvenli araç."
         host = request.host_url.rstrip('/')
         
         return render_template_string(HTML_UI, 
@@ -452,10 +496,11 @@ def catch_all(path):
             current_year=now.year, 
             current_sayac=formatted_sayac,
             current_sayac_raw=str(sayac),
-            page_title=page_title,
-            page_desc=page_desc,
+            page_title=page["title"],
+            page_desc=page["desc"],
             host=host,
-            request=request
+            request=request,
+            seo_content=page["content"] 
         )
         
     return "404 Not Found", 404
