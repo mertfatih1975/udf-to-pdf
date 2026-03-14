@@ -2,96 +2,81 @@ import os
 import zlib
 import zipfile
 import xml.etree.ElementTree as ET
-from flask import Flask, request, send_file, render_template_string, make_response
+from flask import Flask, request, send_file, render_template_string, Response, redirect
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 import io
 import re
+from datetime import datetime
 
 app = Flask(__name__)
 
-# --- GELİŞMİŞ UDF PARSER (v25.2) ---
+# --- SEO SAYFALARI (Google'da her aramada çıkmak için) ---
+SEO_PAGES = ["udf-to-pdf", "udf-to-word", "udf-to-txt", "uyap-udf-converter", "udf-dosyasi-acma", "udf-dosyasi-pdf-yapma", "udf-dosyasi-word-yapma", "udf-viewer", "udf-to-doc", "udf-reader", "udf-file-converter", "udf-to-text", "udf-belgesi-acma", "udf-to-pdf-online", "udf-dosyasi-donustur", "uyap-belgesi-ac", "uyap-udf-pdf", "udf-to-pdf-free", "udf-file-viewer", "udf-to-docx", "udf-belgesi-pdf", "udf-belgesi-word", "udf-reader-online", "udf-parser", "udf-converter-online", "udf-file-reader", "udf-to-printable", "udf-document-viewer", "udf-to-html", "udf-to-markdown", "udf-to-rtf", "udf-to-open", "udf-to-readable", "udf-file-parser", "udf-uyap-reader", "udf-dava-belgesi-ac", "udf-hukuk-belgesi", "udf-belge-donusturucu", "udf-court-file-viewer", "udf-to-pdf-fast", "udf-to-word-fast", "udf-convert-free", "udf-online-reader", "udf-open-online", "udf-belgesi-goruntule", "udf-uyap-pdf", "udf-uyap-word", "udf-document-converter", "udf-text-extractor", "udf-belge-okuyucu"]
+
+# --- HTTPS GÜVENLİK YÖNLENDİRMESİ ---
+@app.before_request
+def before_request():
+    if request.headers.get('X-Forwarded-Proto') == 'http':
+        return redirect(request.url.replace('http://', 'https://', 1), code=301)
+
+# --- UDF PARSER ---
 def guclu_parser(data):
     try:
-        # 1. STRATEJİ: ZIP ARŞİV KONTROLÜ (deneme 1.udf yapısı için)
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as z:
-                # Arşiv içindeki tüm dosyaları tara, .xml olanı bul
                 for name in z.namelist():
                     if name.lower().endswith(".xml"):
-                        with z.open(name) as f:
-                            return parse_xml_to_lines(f.read())
-        except:
-            pass 
-
-        # 2. STRATEJİ: ZLIB TARAMA (Eski nesil UDF için)
+                        with z.open(name) as f: return parse_xml_to_lines(f.read())
+        except: pass
         sigs = [b'\x78\x9c', b'\x78\xda', b'\x78\x01']
         for sig in sigs:
             pos = data.find(sig)
             while pos != -1:
                 try:
                     decompressed = zlib.decompress(data[pos:])
-                    if b"<" in decompressed:
-                        return parse_xml_to_lines(decompressed)
+                    if b"<" in decompressed: return parse_xml_to_lines(decompressed)
                 except: pass
                 pos = data.find(sig, pos + 1)
-        
-        return ["HATA: Dosya içeriği ayrıştırılamadı. Geçerli bir UDF dosyası yüklediğinizden emin olun."]
-    except Exception as e:
-        return [f"Hata: {str(e)}"]
+        return ["HATA: İçerik ayrıştırılamadı."]
+    except Exception as e: return [f"Hata: {str(e)}"]
 
 def parse_xml_to_lines(xml_content):
     try:
         xml_str = xml_content.decode("utf-8", errors="ignore")
-        
-        # KUTUCUK TEMİZLİĞİ: Görünmez kontrol karakterlerini ve özel boşlukları temizle
         xml_str = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', xml_str)
         xml_str = xml_str.replace('\xa0', ' ')
-
-        # XML ayrıştırma
         root = ET.fromstring(xml_str)
-        lines = []
-        for elem in root.iter():
-            if elem.text:
-                t = elem.text.strip()
-                if len(t) > 0:
-                    # Satır içi temizlik ve kutucuk engelleme
-                    clean_line = " ".join(t.split())
-                    lines.append(clean_line)
-        
+        lines = [" ".join(elem.text.split()) for elem in root.iter() if elem.text and len(elem.text.strip()) > 1]
         return lines if lines else [re.sub(r'<[^>]+>', ' ', xml_str).strip()]
-    except:
-        # XML bozuksa ham metin kazıma
-        clean = re.sub(r'<[^>]+>', ' ', xml_content.decode("utf-8", errors="ignore"))
-        return [" ".join(clean.split())]
+    except: return [re.sub(r'<[^>]+>', ' ', xml_content.decode("utf-8", errors="ignore")).strip()]
 
-# --- KURUMSAL ARAYÜZ (CACHE KORUMALI) ---
+# --- UDFTOPDF ARAYÜZ ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>UDF Pro Elite v25.2</title>
+    <title>{{ seo_title or 'UDFTOPDF | Ücretsiz UYAP UDF Dönüştürücü' }}</title>
+    <meta name="description" content="UDFTOPDF ile UDF dosyalarını ücretsiz PDF, Word ve TXT'ye dönüştürün. KVKK uyumlu ve hızlı UYAP döküman açıcı.">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
         .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 480px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
-        .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 18px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; text-align: left; line-height: 1.6; }
+        .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 18px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; text-align: left; }
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; opacity: 0.3; pointer-events: none; }
         button.active { opacity: 1; pointer-events: auto; }
         .pdf { background: #0ea5e9; grid-column: span 2; font-size: 16px; }
         .word { background: #2b579a; } .txt { background: #64748b; }
         input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; }
-        .version { position: fixed; bottom: 10px; right: 10px; font-size: 10px; color: #475569; }
+        .footer { margin-top: 30px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
+        .ssl-badge { color: #10b981; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 5px; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h2 style="color:#38bdf8; margin:0 0 15px 0;">UDF PRO <span style="color:white">ELITE</span></h2>
-        <div class="security-badge">
-            🔒 <b>Sayın kullanıcımız;</b> yüklediğiniz dosyalar hiçbir şekilde sunucularımızda depolanmaz. Anlık işlenir ve kalıcı olarak silinir.
-        </div>
+        <h1 style="color:#38bdf8; font-size: 32px; letter-spacing: 2px;">{{ h1_label or 'UDFTOPDF' }}</h1>
+        <div class="security-badge">🔒 <b>Sayın kullanıcımız;</b> Dosyalarınız sunucuda saklanmaz, sadece anlık işlenir ve kalıcı olarak silinir.</div>
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
             <input type="file" name="file" id="fIn" accept=".udf" required>
             <label style="margin: 20px 0; font-size: 12px; display: block; cursor: pointer;">
@@ -104,7 +89,11 @@ HTML_UI = """
             </div>
         </form>
     </div>
-    <div class="version">Sürüm: Elite v25.2 | Bursa Ofis Gökçadır</div>
+    <div class="footer">
+        <div class="ssl-badge">🛡️ SSL SERTİFİKASI İLE GÜVENLİ BAĞLANTI</div>
+        © {{ current_year }} UDFTOPDF | Fatih Mert - Bursa <br>
+        Ofis Gökçadır | Tüm Hakları Saklıdır.
+    </div>
     <script>
         function toggleBtns() {
             const isChecked = document.getElementById('kvkk').checked;
@@ -121,31 +110,43 @@ HTML_UI = """
 
 @app.route("/", methods=["GET","POST"])
 def index():
+    now = datetime.now().year
     if request.method == "GET":
-        response = make_response(render_template_string(HTML_UI))
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        return response
-    
-    file = request.files.get("file")
+        return render_template_string(HTML_UI, current_year=now)
+    f = request.files.get("file")
     mod = request.form.get("mod")
-    lines = guclu_parser(file.read())
+    lines = guclu_parser(f.read())
     text = "\n".join(lines)
-
-    if mod == "txt":
-        return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.txt", mimetype="text/plain")
-    if mod == "word":
-        return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.doc", mimetype="application/msword")
-
+    if mod == "txt": return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.txt", mimetype="text/plain")
+    if mod == "word": return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.doc", mimetype="application/msword")
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
     y = 800
     c.setFont("Helvetica", 11)
     for line in lines:
         if y < 50: c.showPage(); c.setFont("Helvetica", 11); y = 800
-        c.drawString(50, y, line[:95])
-        y -= 18
+        c.drawString(50, y, line[:95]); y -= 18
     c.save(); buf.seek(0)
     return send_file(buf, as_attachment=True, download_name="belge.pdf", mimetype="application/pdf")
+
+@app.route("/<slug>")
+def seo_route(slug):
+    now = datetime.now().year
+    if slug not in SEO_PAGES: return "404", 404
+    title = f"{slug.replace('-',' ').title()} | UDFTOPDF"
+    label = "UDFTOPDF"
+    return render_template_string(HTML_UI, seo_title=title, h1_label=label, current_year=now)
+
+@app.route("/robots.txt")
+def robots():
+    return Response(f"User-agent: *\nAllow: /\nSitemap: https://udf-to-pdf-production.up.railway.app/sitemap.xml", mimetype="text/plain")
+
+@app.route("/sitemap.xml")
+def sitemap():
+    base = "https://udf-to-pdf-production.up.railway.app"
+    urls = f"<url><loc>{base}/</loc></url>"
+    for p in SEO_PAGES: urls += f"<url><loc>{base}/{p}</loc></url>"
+    return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', mimetype="text/xml")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
