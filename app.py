@@ -84,7 +84,7 @@ HTML_UI = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta name="description" content="UDF dosyalarını ücretsiz PDF ve Word formatına dönüştürün. UYAP Doküman Formatı çevirici.">
+    <meta name="description" content="UDF dosyalarını ücretsiz PDF, Word ve JPEG formatına dönüştürün. UYAP Doküman Formatı çevirici.">
     <title>UDFTOPDF | UYAP Dosya Dönüştürücü</title>
     
     <link rel="manifest" href="/manifest.json">
@@ -117,136 +117,17 @@ HTML_UI = """
         .info-panel h3 { color: #e2e8f0; font-size: 16px; margin-top: 20px; margin-bottom: 10px; }
         .info-panel b { color: #f8fafc; }
         .info-panel ul, .info-panel ol { padding-left: 20px; margin-bottom: 20px; }
+        .info-panel li { margin-bottom: 8px; }
         
+        /* KULLANICI YORUMLARI CSS */
+        .review-box { background: #1e293b; padding: 15px 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #38bdf8; }
+        .review-text { font-style: italic; color: #cbd5e1; margin-bottom: 8px; font-size: 14px; }
+        .review-author { color: #f8fafc; font-weight: bold; font-size: 13px; text-align: right; }
+        .stars { color: #fbbf24; font-size: 14px; margin-bottom: 5px; }
+
         .footer { margin-top: 10px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
         .contact-area { margin-top: 20px; padding: 15px; border-top: 1px solid #334155; color: #94a3b8; font-size: 13px; }
         .contact-area b { color: #38bdf8; }
         h1 { color:#38bdf8; font-size: 20px; line-height: 1.4; margin-bottom: 15px; }
 
-        @media (min-width: 600px) {
-            .btn-group { display: grid; grid-template-columns: 1fr 1fr; }
-            .pdf { grid-column: span 2; }
-            h1 { font-size: 24px; }
-        }
-    </style>
-</head>
-<body>
-    <div class="box">
-        <h1>Uyap Uzantılı Dosyalarınızı<br>Güvenle Dönüştürebilirsiniz</h1>
-        
-        <div class="mobile-install-badge">📲 Hızlı erişim için tarayıcı menüsünden "Ana Ekrana Ekle" diyerek uygulamamızı indirebilirsiniz.</div>
-        
-        <div class="stats-badge">🚀 Toplam 11.535 dönüştürme başarıyla tamamlandı.</div>
-
-        <div class="trust-points">
-            <span>✅ <b>Güvenli:</b> Dosyalarınız işlem sonrası otomatik olarak silinir.</span>
-            <span>✅ <b>Ücretsiz:</b> Hiçbir ücret veya kayıt gerektirmez.</span>
-            <span>✅ <b>Hızlı:</b> Saniyeler içinde dönüştürme işlemi tamamlanır.</span>
-        </div>
-
-        <div class="security-badge">
-            🔒 <b>Sevgili Kullanıcımız;</b> Sunucularımızda hiçbir dosyanız depolanmaz. Verileriniz yalnızca dönüştürme esnasında anlık olarak işlenir ve işlem biter bitmez kalıcı olarak silinir.
-        </div>
-
-        <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
-            <input type="file" name="file" id="fIn" accept=".udf" required>
-            <label style="margin: 20px 0; font-size: 13px; display: block; cursor: pointer; text-align: center;">
-                <input type="checkbox" id="kvkk" onchange="toggleBtns()"> KVKK Aydınlatma Metnini okudum ve onaylıyorum.
-            </label>
-            <div class="btn-group">
-                <button type="submit" name="mod" value="pdf" id="btnPdf" class="pdf">PDF OLARAK DÖNÜŞTÜR</button>
-                <button type="submit" name="mod" value="word" id="btnWord" class="word">WORD YAP</button>
-                <button type="submit" name="mod" value="txt" id="btnTxt" class="txt">TXT YAP</button>
-            </div>
-        </form>
-        
-        <div class="contact-area">
-            🤝 <b>Reklam ve İşbirliği:</b><br>
-            mertfatih1975@gmail.com | 0532 764 16 61
-        </div>
-    </div>
-
-    <div class="info-panel">
-        <h2>📋 Desteklenen Formatlar</h2>
-        <ul>
-            <li><b>Giriş:</b> .udf (UYAP Doküman Formatı)</li>
-            <li><b>Çıkış:</b> PDF (Editable veya Visual), Word (.doc), Metin (.txt)</li>
-        </ul>
-        
-        <h2>🔄 Nasıl Çalışır?</h2>
-        <ol>
-            <li><b>Dosyayı yükleyin:</b> Dönüştürmek istediğiniz dosyayı seçin.</li>
-            <li><b>Format seçin:</b> PDF, Word veya TXT seçeneklerinden birini belirleyin.</li>
-            <li><b>Modu belirleyin:</b> Gerekli çeviri modunu ayarlayın.</li>
-            <li><b>Dönüştür ve indirin:</b> İşlemi başlatın ve saniyeler içinde belgenizi alın.</li>
-        </ol>
-
-        <h2>⚖️ UDF Nedir? UYAP Doküman Formatı</h2>
-        <p><b>UDF dosyası (UYAP Doküman Formatı)</b>, Türkiye'de mahkemeler ve avukatlar tarafından UYAP (Ulusal Yargı Ağı Bilişim Sistemi) üzerinden oluşturulan belge formatıdır. Dava dilekçeleri, mahkeme kararları ve resmi hukuki yazışmalar <b>.udf uzantılı</b> dosyalar olarak kaydedilmektedir.</p>
-        <p><b>UDF dosyası nasıl açılır?</b> sorusu avukatlar ve vatandaşlar tarafından sıkça sorulmaktadır. Standart belgelerden farklı olduğundan Adobe Reader veya Microsoft Word ile doğrudan açılamaz. Bu <b>UDF çevirici</b> araç, UDF dosyalarınızı PDF formatına dönüştürerek erişilebilir hale getirir.</p>
-
-        <h3>📄 UDF PDF Dönüştürme – Nasıl Yapılır?</h3>
-        <ul>
-            <li>UYAP üzerinden indirdiğiniz <b>.udf dosyasını</b> yükleme alanına sürükleyin.</li>
-            <li><b>PDF formatını</b> seçin.</li>
-            <li>Dönüştür butonuna tıklayın ve PDF'yi indirin.</li>
-        </ul>
-        <p><b>UDF dönüştürücü</b> aracımız, avukatlar, hakimler, savcılar ve adli işlerle ilgilenen her kullanıcı için tasarlanmıştır. <b>UYAP UDF belge dönüştürme</b> işlemi ücretsiz ve kayıtsız kullanılabilir.</p>
-    </div>
-
-    <div class="footer">
-        🛡️ SSL Güvenli Bağlantı | İstanbul - Türkiye | 🕒 {{ current_time }}<br>
-        © {{ current_year }} UDFTOPDF - Tüm Hakları Saklıdır.
-    </div>
-
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                    console.log('PWA aktif.');
-                }).catch(function(err) {});
-            });
-        }
-        function toggleBtns() {
-            const isChecked = document.getElementById('kvkk').checked;
-            ['btnPdf', 'btnWord', 'btnTxt'].forEach(id => {
-                const b = document.getElementById(id);
-                b.style.opacity = isChecked ? "1" : "0.3";
-                b.style.pointerEvents = isChecked ? "auto" : "none";
-            });
-        }
-    </script>
-</body>
-</html>
-"""
-
-@app.route("/", methods=["GET","POST"])
-def index():
-    tz = pytz.timezone('Europe/Istanbul')
-    now = datetime.now(tz)
-    
-    if request.method == "GET":
-        resp = make_response(render_template_string(HTML_UI, current_time=now.strftime("%H:%M"), current_year=now.year))
-        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        return resp
-    
-    f = request.files.get("file")
-    mod = request.form.get("mod")
-    lines = guclu_parser(f.read())
-    text = "\n".join(lines)
-    
-    if mod == "txt": return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.txt", mimetype="text/plain")
-    if mod == "word": return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.doc", mimetype="application/msword")
-    
-    buf = io.BytesIO()
-    c = canvas.Canvas(buf, pagesize=A4)
-    y = 800
-    c.setFont("Helvetica", 11)
-    for line in lines:
-        if y < 50: c.showPage(); c.setFont("Helvetica", 11); y = 800
-        c.drawString(50, y, line[:95]); y -= 18
-    c.save(); buf.seek(0)
-    return send_file(buf, as_attachment=True, download_name="belge.pdf", mimetype="application/pdf")
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+        @media
