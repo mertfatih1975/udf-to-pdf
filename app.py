@@ -5,12 +5,11 @@ from flask import Flask, request, send_file, render_template_string
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.pagesizes import A4
 import io
 
 app = Flask(__name__)
 
-# --- ALTYAPI: FONT ---
+# --- ALTYAPI ---
 try:
     pdfmetrics.registerFont(TTFont('ArialCustom', 'arial.ttf'))
     FONT_NAME = 'ArialCustom'
@@ -19,91 +18,95 @@ except:
 
 def udf_motoru(data):
     try:
-        # UDF dosyasının kalbindeki sıkıştırılmış bloğu bul
-        start_tag = b"<content>"
-        end_tag = b"</content>"
-        s = data.find(start_tag)
-        e = data.find(end_tag)
-        
-        if s == -1 or e == -1:
-            return ["HATA: Dosya standart UYAP UDF formatında değil veya kilitli."]
+        start_tag, end_tag = b"<content>", b"</content>"
+        s, e = data.find(start_tag), data.find(end_tag)
+        if s == -1 or e == -1: return ["Hata: Geçersiz UDF formatı."]
+        xml_ham = zlib.decompress(data[s+len(start_tag):e])
+        root = ET.fromstring(xml_ham)
+        return [elem.text.strip() for elem in root.iter() if elem.text and elem.text.strip()]
+    except: return ["İşleme hatası oluştu."]
 
-        # Zlib katmanını soy ve XML'i aç
-        xml_raw = zlib.decompress(data[s+9:e])
-        root = ET.fromstring(xml_raw)
-        
-        # Metinleri çek
-        lines = []
-        for elem in root.iter():
-            if elem.text and elem.text.strip():
-                lines.append(elem.text.strip())
-        
-        return lines if lines else ["HATA: Dosya boş veya okunabilir metin içermiyor."]
-    except Exception as ex:
-        return [f"TEKNİK HATA: {str(ex)}"]
-
-# --- FULL ARAYÜZ (BAR + KVKK + FORMATLAR) ---
+# --- GELİŞMİŞ ARAYÜZ (SEO + PROGRESS BAR + KVKK) ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UDF Pro v11.0 | Ofis Gökçadır Güvenli Dönüştürücü</title>
-    <meta name="description" content="UYAP UDF dosyalarınızı saklamadan PDF, Word ve TXT'ye dönüştürün.">
+    <title>UDF Pro | Hızlı PDF, Word ve TXT Dönüştürücü</title>
+    <meta name="description" content="UYAP UDF dosyalarını saklamadan, güvenle PDF, Word ve TXT'ye dönüştürün. %100 KVKK uyumlu ve ücretsiz.">
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 450px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
-        .badge { background: #064e3b; color: #6ee7b7; padding: 15px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; }
-        .progress-box { display: none; margin: 20px 0; }
-        .bar-bg { width: 100%; background: #334155; border-radius: 10px; height: 12px; overflow: hidden; }
-        .bar-fill { width: 0%; height: 100%; background: #0ea5e9; transition: width 0.1s; }
-        .btn-group { display: flex; flex-direction: column; gap: 12px; }
-        button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; font-size: 14px; transition: 0.3s; }
+        .badge { background: #064e3b; color: #6ee7b7; padding: 15px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; line-height: 1.5; }
+        .progress-container { display: none; margin: 20px 0; background: #334155; border-radius: 10px; height: 10px; overflow: hidden; }
+        .progress-bar { width: 0%; height: 100%; background: #38bdf8; transition: width 0.3s; }
+        .btn-group { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; font-size: 14px; }
         .pdf { background: #0ea5e9; } .word { background: #2b579a; } .txt { background: #64748b; }
-        button:hover { filter: brightness(1.2); transform: scale(1.01); }
-        input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; cursor: pointer; border: 1px dashed #475569; padding: 10px; border-radius: 10px; }
-        .kvkk-info { margin-top: 25px; font-size: 11px; color: #94a3b8; cursor: pointer; text-decoration: underline; }
+        button:hover { filter: brightness(1.2); transform: scale(1.02); }
+        input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; cursor: pointer; }
+        .kvkk-link { margin-top: 25px; font-size: 11px; color: #94a3b8; cursor: pointer; text-decoration: underline; opacity: 0.7; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h1 style="color:#38bdf8; margin:0 0 10px 0;">UDF PRO <span style="color:white">v11.0</span></h1>
-        <div class="badge">🛡️ <b>GİZLİLİK:</b> Dosyalarınız saklanmaz, sadece RAM'de işlenir ve anında silinir.</div>
+        <h1 style="color:#38bdf8; margin:0 0 10px 0;">UDF PRO <span style="color:white">DÖNÜŞTÜRÜCÜ</span></h1>
         
-        <form id="uForm" method="POST" enctype="multipart/form-data">
-            <input type="file" name="file" id="fIn" accept=".udf" required>
+        <div class="badge">
+            <b>🛡️ GİZLİLİK VE VERİ GÜVENLİĞİ:</b><br>
+            Yüklediğiniz dosyalar sunucularımızda <u>asla saklanmaz</u>. Verileriniz sadece anlık olarak işlenir ve tarayıcınıza gönderildiği an bellekten silinir.
+        </div>
+
+        <form id="uploadForm" method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" id="fileInput" accept=".udf" required>
             
-            <div id="pBox" class="progress-box">
-                <div class="bar-bg"><div id="bFill" class="bar-fill"></div></div>
-                <p id="pStat" style="font-size:12px; margin-top:8px; color:#38bdf8;">İşleniyor: %0</p>
+            <div id="progressArea" class="progress-container">
+                <div id="progressBar" class="progress-bar"></div>
             </div>
+            <div id="statusText" style="font-size:12px; color:#38bdf8; margin-bottom:10px; display:none;">İşleniyor: %0</div>
 
             <div class="btn-group">
-                <button type="submit" name="m" value="pdf" class="pdf" onclick="go()">PRO PDF OLARAK DÖNÜŞTÜR</button>
-                <button type="submit" name="m" value="word" class="word" onclick="go()">PRO WORD (DOC) OLARAK DÖNÜŞTÜR</button>
-                <button type="submit" name="m" value="txt" class="txt" onclick="go()">HIZLI TEXT OLARAK DÖNÜŞTÜR</button>
+                <button type="submit" name="mod" value="pdf" class="pdf">PRO PDF OLARAK DÖNÜŞTÜR</button>
+                <button type="submit" name="mod" value="word" class="word">PRO WORD (DOC) OLARAK DÖNÜŞTÜR</button>
+                <button type="submit" name="mod" value="txt" class="txt">HIZLI METİN (TEXT) OLARAK DÖNÜŞTÜR</button>
             </div>
         </form>
 
-        <div class="kvkk-info" onclick="alert('KVKK Metni: Verileriniz hiçbir şekilde kaydedilmez veya paylaşılmaz. İşlem bitince bellekten silinir.')">KVKK ve Güvenlik Metni</div>
-        <p style="font-size:10px; color:#475569; margin-top:30px">© 2026 FATİH MERT | BURSA</p>
+        <div class="kvkk-link" onclick="document.getElementById('kvkkModal').style.display='block'">KVKK Aydınlatma Metni</div>
+        <p style="font-size:10px; color:#475569; margin-top:20px">© 2026 FATİH MERT | Ofis Gökçadır - BURSA</p>
+    </div>
+
+    <div id="kvkkModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:100;">
+        <div style="background:#1e293b; width:80%; max-width:500px; margin:10% auto; padding:30px; border-radius:20px; border:1px solid #334155;">
+            <h3>KVKK Aydınlatma Metni</h3>
+            <p style="font-size:14px; line-height:1.6; color:#94a3b8;">
+                Bu uygulama, 6698 sayılı KVKK kapsamında veri sorumlusu sıfatı taşımadan çalışır. Yüklenen .udf uzantılı dosyalar herhangi bir veri tabanına kaydedilmez, depolanmaz ve üçüncü taraflarla paylaşılmaz. İşlem tamamen RAM (bellek) üzerinde anlık olarak gerçekleştirilir.
+            </p>
+            <button onclick="document.getElementById('kvkkModal').style.display='none'" style="background:#0ea5e9; width:100%;">ANLADIM</button>
+        </div>
     </div>
 
     <script>
-        function go() {
-            if (document.getElementById('fIn').files.length === 0) return;
-            document.getElementById('pBox').style.display = 'block';
-            let f = document.getElementById('bFill');
-            let s = document.getElementById('pStat');
-            let val = 0;
-            let int = setInterval(() => {
-                val += (98 - val) * 0.1;
-                f.style.width = val + '%';
-                s.innerText = 'Dönüştürülüyor: %' + Math.floor(val);
-                if (val > 97) clearInterval(int);
+        document.getElementById('uploadForm').onsubmit = function() {
+            var progressBar = document.getElementById('progressBar');
+            var progressArea = document.getElementById('progressArea');
+            var statusText = document.getElementById('statusText');
+            
+            progressArea.style.display = 'block';
+            statusText.style.display = 'block';
+            
+            var width = 0;
+            var interval = setInterval(function() {
+                if (width >= 95) {
+                    clearInterval(interval);
+                } else {
+                    width += 5;
+                    progressBar.style.width = width + '%';
+                    statusText.innerHTML = 'İşleniyor: %' + width;
+                }
             }, 100);
-        }
+        };
     </script>
 </body>
 </html>
@@ -114,29 +117,26 @@ def index():
     if request.method == 'GET':
         return render_template_string(HTML_UI)
     
-    file = request.files.get('file')
-    mod = request.form.get('m')
-    lines = udf_motoru(file.read())
-    
-    # Hata kontrolü
-    if any("HATA" in str(line) for line in lines):
-        # Eğer hata varsa PDF olarak hata mesajını indir
-        buf = io.BytesIO()
-        c = canvas.Canvas(buf)
-        c.drawString(50, 800, lines[0])
-        c.save()
-        buf.seek(0)
-        return send_file(buf, as_attachment=True, download_name="hata_raporu.pdf")
-
+    f = request.files['file']
+    mod = request.form.get('mod')
+    lines = udf_motoru(f.read())
     text = "\\n".join(lines)
+
+    # Dosya indirme başlığını "Soru Sormaya" zorlayacak şekilde ayarla
+    response_headers = {
+        'Content-Disposition': f'attachment; filename="donusturuldu_belge.{mod}"',
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+    }
 
     if mod == 'txt':
         return send_file(io.BytesIO(text.encode('utf-8')), as_attachment=True, download_name="belge.txt", mimetype='text/plain')
+    
     elif mod == 'word':
         return send_file(io.BytesIO(text.encode('utf-8')), as_attachment=True, download_name="belge.doc", mimetype='application/msword')
+
     else: # PDF
         buf = io.BytesIO()
-        c = canvas.Canvas(buf, pagesize=A4)
+        c = canvas.Canvas(buf)
         y = 800
         c.setFont(FONT_NAME, 10)
         for line in lines:
