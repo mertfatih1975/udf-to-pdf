@@ -113,7 +113,7 @@ def app_icon():
     svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#1e293b"/><text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-size="100" font-weight="bold" font-family="Arial, sans-serif" fill="#38bdf8">UDF</text><text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" font-size="60" font-weight="bold" font-family="Arial, sans-serif" fill="#f8fafc">TO PDF</text></svg>"""
     return Response(svg, mimetype="image/svg+xml")
 
-# --- UI TASARIMI ---
+# --- UI TASARIMI (SENİN SEO EKLENTİLERİNLE) ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
@@ -121,10 +121,42 @@ HTML_UI = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta name="description" content="UDF dosyalarını ücretsiz PDF, Word ve JPEG formatına dönüştürün. UYAP Doküman Formatı çevirici.">
+
+    <title>{{ page_title }}</title>
+    <meta name="description" content="{{ page_desc }}">
+
+    <link rel="canonical" href="{{ host }}{{ request.path }}"/>
+
+    <meta property="og:title" content="{{ page_title }}">
+    <meta property="og:description" content="{{ page_desc }}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ host }}{{ request.path }}">
+    <meta property="og:image" content="{{ host }}/icon.svg">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ page_title }}">
+    <meta name="twitter:description" content="{{ page_desc }}">
+    <meta name="twitter:image" content="{{ host }}/icon.svg">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "UDFTOPDF",
+      "operatingSystem": "Web",
+      "applicationCategory": "Utility",
+      "url": "{{ host }}",
+      "description": "{{ page_desc }}",
+      "softwareVersion": "1.0",
+      "author": {
+        "@type": "Person",
+        "name": "Fatih Mert"
+      }
+    }
+    </script>
+
     <meta name="google-site-verification" content="aNpaoi0xHA1z8efKdzI2QOY1UkRhJpx7MURlOgyd9uE" />
-    <title>UDFTOPDF | UYAP Dosya Dönüştürücü</title>
-    
+
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0f172a">
     <link rel="apple-touch-icon" href="/icon.svg">
@@ -312,7 +344,20 @@ def index():
         sayac = get_sayac()
         formatted_sayac = f"{sayac:,}".replace(',', '.')
         
-        resp = make_response(render_template_string(HTML_UI, current_time=now.strftime("%H:%M"), current_year=now.year, current_sayac=formatted_sayac))
+        # Ana Sayfa SEO Değişkenleri
+        page_title = "UDFTOPDF | UYAP Dosya Dönüştürücü"
+        page_desc = "UDF dosyalarını ücretsiz PDF, Word ve JPEG formatına dönüştürün. UYAP Doküman Formatı çevirici."
+        host = request.host_url.rstrip('/')
+        
+        resp = make_response(render_template_string(HTML_UI, 
+            current_time=now.strftime("%H:%M"), 
+            current_year=now.year, 
+            current_sayac=formatted_sayac,
+            page_title=page_title,
+            page_desc=page_desc,
+            host=host,
+            request=request
+        ))
         resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         return resp
     
@@ -395,7 +440,31 @@ def catch_all(path):
         now = datetime.now(tz)
         sayac = get_sayac()
         formatted_sayac = f"{sayac:,}".replace(',', '.')
-        return render_template_string(HTML_UI, current_time=now.strftime("%H:%M"), current_year=now.year, current_sayac=formatted_sayac)
+        
+        # Dinamik SEO Başlıkları (Girilen linke göre Google'a özel başlık verir)
+        titles = {
+            "udf-dosyasi-pdf-yapma": "UDF Dosyası PDF Yapma | UDFTOPDF",
+            "udf-to-pdf": "UDF to PDF Converter | Hızlı ve Ücretsiz",
+            "uyap-udf-converter": "UYAP UDF Çevirici | UDFTOPDF",
+            "udf-dosyasi-acma": "UDF Dosyası Açma Rehberi ve Dönüştürücü",
+            "udf-to-word": "UDF to Word | UYAP Formatını DOCX Yapma",
+            "jpeg-to-udf": "JPEG to UDF | Fotoğrafı UYAP Formatına Çevir"
+        }
+        
+        page_title = titles.get(path, "UDFTOPDF | UYAP Dosya Dönüştürücü")
+        page_desc = f"{page_title} işlemi için en hızlı ve güvenli araç. UYAP belgelerinizi saniyeler içinde ücretsiz dönüştürün."
+        host = request.host_url.rstrip('/')
+        
+        return render_template_string(HTML_UI, 
+            current_time=now.strftime("%H:%M"), 
+            current_year=now.year, 
+            current_sayac=formatted_sayac,
+            page_title=page_title,
+            page_desc=page_desc,
+            host=host,
+            request=request
+        )
+        
     return "404 Not Found", 404
 
 if __name__ == "__main__":
