@@ -13,6 +13,27 @@ import json
 
 app = Flask(__name__)
 
+# --- SAYAÇ SİSTEMİ ---
+SAYAC_DOSYASI = "sayac.txt"
+
+def get_sayac():
+    try:
+        if os.path.exists(SAYAC_DOSYASI):
+            with open(SAYAC_DOSYASI, "r") as f:
+                return int(f.read().strip())
+    except:
+        pass
+    return 11535
+
+def increment_sayac():
+    count = get_sayac() + 1
+    try:
+        with open(SAYAC_DOSYASI, "w") as f:
+            f.write(str(count))
+    except:
+        pass
+    return count
+
 # --- UDF PARSER ---
 def guclu_parser(data):
     try:
@@ -107,7 +128,6 @@ HTML_UI = """
         button { border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; opacity: 0.3; pointer-events: none; width: 100%; font-size: 14px; }
         button.active { opacity: 1; pointer-events: auto; }
         
-        /* Renkler */
         .pdf { background: #0ea5e9; }
         .word { background: #2b579a; } 
         .txt { background: #64748b; }
@@ -121,12 +141,15 @@ HTML_UI = """
         input[type="file"] { margin-bottom: 10px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; cursor: pointer; box-sizing: border-box; }
         
         .info-panel { width: 100%; max-width: 600px; background: #111827; padding: 25px; border-radius: 20px; border: 1px solid #334155; margin-bottom: 20px; font-size: 14px; line-height: 1.6; color: #94a3b8; box-sizing: border-box; text-align: left; }
-        .info-panel h2 { color: #38bdf8; font-size: 18px; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
+        .info-panel h2 { color: #38bdf8; font-size: 18px; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
         .info-panel h3 { color: #e2e8f0; font-size: 16px; margin-top: 20px; margin-bottom: 10px; }
         .info-panel b { color: #f8fafc; }
         .info-panel ul, .info-panel ol { padding-left: 20px; margin-bottom: 20px; }
         .info-panel li { margin-bottom: 8px; }
         
+        .review-btn { background: #38bdf8; color: #0f172a; padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; font-weight: bold; transition: 0.2s; }
+        .review-btn:hover { background: #0ea5e9; color: white; }
+
         .review-box { background: #1e293b; padding: 15px 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #38bdf8; }
         .review-text { font-style: italic; color: #cbd5e1; margin-bottom: 8px; font-size: 14px; }
         .review-author { color: #f8fafc; font-weight: bold; font-size: 13px; text-align: right; }
@@ -148,7 +171,7 @@ HTML_UI = """
         
         <div class="mobile-install-badge">📲 Hızlı erişim için tarayıcı menüsünden "Ana Ekrana Ekle" diyerek uygulamamızı indirebilirsiniz.</div>
         
-        <div class="stats-badge">🚀 Toplam 11.535 dönüştürme başarıyla tamamlandı.</div>
+        <div class="stats-badge">🚀 Toplam {{ current_sayac }} dönüştürme başarıyla tamamlandı.</div>
 
         <div class="security-badge">
             🔒 <b>Sevgili Kullanıcımız;</b> Sunucularımızda hiçbir dosyanız depolanmaz. Verileriniz yalnızca dönüştürme esnasında anlık olarak işlenir ve işlem biter bitmez kalıcı olarak silinir.
@@ -201,17 +224,13 @@ HTML_UI = """
         <h2>⚖️ UDF Nedir? UYAP Doküman Formatı</h2>
         <p><b>UDF dosyası (UYAP Doküman Formatı)</b>, Türkiye'de mahkemeler ve avukatlar tarafından UYAP (Ulusal Yargı Ağı Bilişim Sistemi) üzerinden oluşturulan belge formatıdır. Dava dilekçeleri, mahkeme kararları ve resmi hukuki yazışmalar <b>.udf uzantılı</b> dosyalar olarak kaydedilmektedir.</p>
         <p><b>UDF dosyası nasıl açılır?</b> sorusu avukatlar ve vatandaşlar tarafından sıkça sorulmaktadır. Standart belgelerden farklı olduğundan Adobe Reader veya Microsoft Word ile doğrudan açılamaz. Bu <b>UDF çevirici</b> araç, UDF dosyalarınızı PDF formatına dönüştürerek erişilebilir hale getirir.</p>
-
-        <h3>📄 Çift Yönlü Dönüştürme – Nasıl Yapılır?</h3>
-        <ul>
-            <li>UYAP üzerinden indirdiğiniz dosyayı yükleme alanına sürükleyin.</li>
-            <li>Listelenen butonlardan dilediğinizi seçin. Artık sadece UDF'yi PDF'e değil, PDF ve Word dosyalarını da UDF sistemine uygun hale getirebilirsiniz.</li>
-        </ul>
-        <p><b>UDF dönüştürücü</b> aracımız, avukatlar, hakimler, savcılar ve adli işlerle ilgilenen her kullanıcı için tasarlanmıştır. <b>UYAP UDF belge dönüştürme</b> işlemi ücretsiz ve kayıtsız kullanılabilir.</p>
     </div>
 
     <div class="info-panel">
-        <h2>💬 Kullanıcı Yorumları</h2>
+        <h2>
+            <span>💬 Kullanıcı Yorumları</span>
+            <a href="mailto:mertfatih1975@gmail.com?subject=UDFTOPDF Yeni Yorum&body=Merhaba,%0A%0ASiteniz hakkındaki yorumum şudur:%0A%0A[Yorumunuzu buraya yazın]%0A%0Aİsim:" class="review-btn">+ Yorum Yap</a>
+        </h2>
         
         <div class="review-box">
             <div class="stars">⭐⭐⭐⭐⭐</div>
@@ -227,7 +246,7 @@ HTML_UI = """
 
         <div class="review-box">
             <div class="stars">⭐⭐⭐⭐⭐</div>
-            <div class="review-text">"UDF dosyalarını Word formatına çevirmek için harika bir araç. Yeni eklenen PDF to UDF özelliği çok işime yaradı. Emeği geçenlere çok teşekkür ederim, favorilerime ekledim!"</div>
+            <div class="review-text">"UDF dosyalarını Word formatına çevirmek için harika bir araç. Yeni eklenen PDF to UDF özelliği çok işime yaradı. Emeği geçenlere çok teşekkür ederim."</div>
             <div class="review-author">- Kemal S.</div>
         </div>
     </div>
@@ -267,19 +286,25 @@ def index():
     now = datetime.now(tz)
     
     if request.method == "GET":
-        resp = make_response(render_template_string(HTML_UI, current_time=now.strftime("%H:%M"), current_year=now.year))
+        # Sayacı dosyadan oku ve formatla (11.535 şeklinde)
+        sayac = get_sayac()
+        formatted_sayac = f"{sayac:,}".replace(',', '.')
+        
+        resp = make_response(render_template_string(HTML_UI, current_time=now.strftime("%H:%M"), current_year=now.year, current_sayac=formatted_sayac))
         resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         return resp
     
     f = request.files.get("file")
     mod = request.form.get("mod")
     
-    # Yeni butonlara basılırsa çökmemesi için geçici yanıtlar:
+    # İşlem yapıldığında sayacı artır
+    increment_sayac()
+    
+    # Geçici dönüşümler
     if mod == "jpeg":
         return Response("JPEG dönüştürme modülü sunucuya yükleniyor. Lütfen daha sonra tekrar deneyin.", mimetype="text/plain; charset=utf-8")
         
     if mod and "to_udf" in mod:
-        # Geçici bir Taslak UDF dosyası oluşturur
         dummy_xml = '<?xml version="1.0" encoding="UTF-8"?><uyap><icerik>Bu dosya donusturulmustur.</icerik></uyap>'
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -287,7 +312,7 @@ def index():
         buf.seek(0)
         return send_file(buf, as_attachment=True, download_name="cevrilmis_belge.udf", mimetype="application/zip")
 
-    # Klasik UDF to PDF/Word/TXT işlemleri
+    # Klasik UDF dönüşümleri
     lines = guclu_parser(f.read())
     text = "\n".join(lines)
     
