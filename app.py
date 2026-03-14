@@ -2,19 +2,20 @@ import os
 import zlib
 import zipfile
 import xml.etree.ElementTree as ET
-from flask import Flask, request, send_file, render_template_string, Response, redirect
+from flask import Flask, request, send_file, render_template_string, Response, redirect, make_response
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 import io
 import re
 from datetime import datetime
+import pytz # Saat dilimi için
 
 app = Flask(__name__)
 
-# --- SEO SAYFALARI (Google'da her aramada çıkmak için) ---
-SEO_PAGES = ["udf-to-pdf", "udf-to-word", "udf-to-txt", "uyap-udf-converter", "udf-dosyasi-acma", "udf-dosyasi-pdf-yapma", "udf-dosyasi-word-yapma", "udf-viewer", "udf-to-doc", "udf-reader", "udf-file-converter", "udf-to-text", "udf-belgesi-acma", "udf-to-pdf-online", "udf-dosyasi-donustur", "uyap-belgesi-ac", "uyap-udf-pdf", "udf-to-pdf-free", "udf-file-viewer", "udf-to-docx", "udf-belgesi-pdf", "udf-belgesi-word", "udf-reader-online", "udf-parser", "udf-converter-online", "udf-file-reader", "udf-to-printable", "udf-document-viewer", "udf-to-html", "udf-to-markdown", "udf-to-rtf", "udf-to-open", "udf-to-readable", "udf-file-parser", "udf-uyap-reader", "udf-dava-belgesi-ac", "udf-hukuk-belgesi", "udf-belge-donusturucu", "udf-court-file-viewer", "udf-to-pdf-fast", "udf-to-word-fast", "udf-convert-free", "udf-online-reader", "udf-open-online", "udf-belgesi-goruntule", "udf-uyap-pdf", "udf-uyap-word", "udf-document-converter", "udf-text-extractor", "udf-belge-okuyucu"]
+# --- SEO SAYFALARI ---
+SEO_PAGES = ["udf-to-pdf", "udf-to-word", "udf-to-txt", "uyap-udf-converter", "udf-dosyasi-acma", "udf-viewer", "udf-to-doc", "udf-belgesi-acma", "udf-to-pdf-online", "uyap-belgesi-ac", "udf-to-pdf-free", "udf-uyap-pdf"]
 
-# --- HTTPS GÜVENLİK YÖNLENDİRMESİ ---
+# --- HTTPS YÖNLENDİRMESİ ---
 @app.before_request
 def before_request():
     if request.headers.get('X-Forwarded-Proto') == 'http':
@@ -51,14 +52,15 @@ def parse_xml_to_lines(xml_content):
         return lines if lines else [re.sub(r'<[^>]+>', ' ', xml_str).strip()]
     except: return [re.sub(r'<[^>]+>', ' ', xml_content.decode("utf-8", errors="ignore")).strip()]
 
-# --- UDFTOPDF ARAYÜZ ---
+# --- UI TASARIMI ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>{{ seo_title or 'UDFTOPDF | Ücretsiz UYAP UDF Dönüştürücü' }}</title>
-    <meta name="description" content="UDFTOPDF ile UDF dosyalarını ücretsiz PDF, Word ve TXT'ye dönüştürün. KVKK uyumlu ve hızlı UYAP döküman açıcı.">
+    <meta name="description" content="UDF dosyalarını ücretsiz PDF ve Word formatına dönüştürün. İstanbul Türkiye merkezli güvenli servis.">
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
         .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 480px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
@@ -70,13 +72,14 @@ HTML_UI = """
         .word { background: #2b579a; } .txt { background: #64748b; }
         input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; }
         .footer { margin-top: 30px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
-        .ssl-badge { color: #10b981; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 5px; }
+        .time-info { color: #38bdf8; font-weight: bold; margin-bottom: 5px; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h1 style="color:#38bdf8; font-size: 32px; letter-spacing: 2px;">{{ h1_label or 'UDFTOPDF' }}</h1>
-        <div class="security-badge">🔒 <b>Sayın kullanıcımız;</b> Dosyalarınız sunucuda saklanmaz, sadece anlık işlenir ve kalıcı olarak silinir.</div>
+        <h1 style="color:#38bdf8; font-size: 32px; letter-spacing: 2px; margin-bottom: 10px;">{{ h1_label or 'UDFTOPDF' }}</h1>
+        <div class="time-info">🕒 {{ current_time }}</div>
+        <div class="security-badge">🔒 <b>Sayın kullanıcımız;</b> Dosyalarınız sunucuda saklanmaz, anlık işlenir ve kalıcı olarak silinir.</div>
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
             <input type="file" name="file" id="fIn" accept=".udf" required>
             <label style="margin: 20px 0; font-size: 12px; display: block; cursor: pointer;">
@@ -90,9 +93,9 @@ HTML_UI = """
         </form>
     </div>
     <div class="footer">
-        <div class="ssl-badge">🛡️ SSL SERTİFİKASI İLE GÜVENLİ BAĞLANTI</div>
-        © {{ current_year }} UDFTOPDF | Fatih Mert - Bursa <br>
-        Ofis Gökçadır | Tüm Hakları Saklıdır.
+        🛡️ 256-Bit SSL Sertifikası ile Korunmaktadır <br>
+        © {{ current_year }} UDFTOPDF | İstanbul - Türkiye <br>
+        Tüm Hakları Saklıdır.
     </div>
     <script>
         function toggleBtns() {
@@ -110,15 +113,25 @@ HTML_UI = """
 
 @app.route("/", methods=["GET","POST"])
 def index():
-    now = datetime.now().year
+    # Türkiye saat dilimini ayarla
+    tz = pytz.timezone('Europe/Istanbul')
+    now = datetime.now(tz)
+    time_str = now.strftime("%d.%m.%Y - %H:%M")
+    year_str = now.year
+
     if request.method == "GET":
-        return render_template_string(HTML_UI, current_year=now)
+        resp = make_response(render_template_string(HTML_UI, current_time=time_str, current_year=year_str))
+        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        return resp
+    
     f = request.files.get("file")
     mod = request.form.get("mod")
     lines = guclu_parser(f.read())
     text = "\n".join(lines)
+    
     if mod == "txt": return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.txt", mimetype="text/plain")
     if mod == "word": return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.doc", mimetype="application/msword")
+    
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
     y = 800
@@ -128,18 +141,6 @@ def index():
         c.drawString(50, y, line[:95]); y -= 18
     c.save(); buf.seek(0)
     return send_file(buf, as_attachment=True, download_name="belge.pdf", mimetype="application/pdf")
-
-@app.route("/<slug>")
-def seo_route(slug):
-    now = datetime.now().year
-    if slug not in SEO_PAGES: return "404", 404
-    title = f"{slug.replace('-',' ').title()} | UDFTOPDF"
-    label = "UDFTOPDF"
-    return render_template_string(HTML_UI, seo_title=title, h1_label=label, current_year=now)
-
-@app.route("/robots.txt")
-def robots():
-    return Response(f"User-agent: *\nAllow: /\nSitemap: https://udf-to-pdf-production.up.railway.app/sitemap.xml", mimetype="text/plain")
 
 @app.route("/sitemap.xml")
 def sitemap():
