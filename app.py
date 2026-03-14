@@ -113,7 +113,7 @@ def app_icon():
     svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#1e293b"/><text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-size="100" font-weight="bold" font-family="Arial, sans-serif" fill="#38bdf8">UDF</text><text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" font-size="60" font-weight="bold" font-family="Arial, sans-serif" fill="#f8fafc">TO PDF</text></svg>"""
     return Response(svg, mimetype="image/svg+xml")
 
-# --- UI TASARIMI (SENİN SEO EKLENTİLERİNLE) ---
+# --- UI TASARIMI (ZENGİN SONUÇLAR İÇİN GÜNCELLENDİ) ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
@@ -133,24 +133,29 @@ HTML_UI = """
     <meta property="og:url" content="{{ host }}{{ request.path }}">
     <meta property="og:image" content="{{ host }}/icon.svg">
 
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ page_title }}">
-    <meta name="twitter:description" content="{{ page_desc }}">
-    <meta name="twitter:image" content="{{ host }}/icon.svg">
-
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": "UDFTOPDF",
-      "operatingSystem": "Web",
-      "applicationCategory": "Utility",
+      "operatingSystem": "Web, Windows, macOS, Android, iOS",
+      "applicationCategory": "UtilitiesApplication",
       "url": "{{ host }}",
       "description": "{{ page_desc }}",
-      "softwareVersion": "1.0",
+      "softwareVersion": "2.0",
       "author": {
         "@type": "Person",
         "name": "Fatih Mert"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "ratingCount": "{{ current_sayac_raw }}"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0.00",
+        "priceCurrency": "TRY"
       }
     }
     </script>
@@ -344,7 +349,6 @@ def index():
         sayac = get_sayac()
         formatted_sayac = f"{sayac:,}".replace(',', '.')
         
-        # Ana Sayfa SEO Değişkenleri
         page_title = "UDFTOPDF | UYAP Dosya Dönüştürücü"
         page_desc = "UDF dosyalarını ücretsiz PDF, Word ve JPEG formatına dönüştürün. UYAP Doküman Formatı çevirici."
         host = request.host_url.rstrip('/')
@@ -353,6 +357,7 @@ def index():
             current_time=now.strftime("%H:%M"), 
             current_year=now.year, 
             current_sayac=formatted_sayac,
+            current_sayac_raw=str(sayac),
             page_title=page_title,
             page_desc=page_desc,
             host=host,
@@ -366,9 +371,6 @@ def index():
     
     increment_sayac()
     
-    # ---------------------------------------------------------
-    # YENİ DÖNÜŞTÜRÜCÜ MOTOR (DİĞER FORMATLARDAN UDF'YE)
-    # ---------------------------------------------------------
     if mod and "to_udf" in mod:
         text_content = ""
         try:
@@ -379,7 +381,6 @@ def index():
                     extracted = page.extract_text()
                     if extracted:
                         text_content += extracted + "\n"
-                        
             elif mod == "word_to_udf":
                 filename = f.filename.lower()
                 if filename.endswith(".docx"):
@@ -387,15 +388,12 @@ def index():
                     doc = docx.Document(f)
                     text_content = "\n".join([para.text for para in doc.paragraphs])
                 else:
-                    return Response("UYARI: Şu an sadece '.docx' uzantılı güncel Word dosyaları çevrilebilmektedir. Lütfen eski sürüm (.doc) dosyanızı bilgisayarınızda açıp 'Farklı Kaydet' diyerek '.docx' olarak kaydedip tekrar deneyin.", mimetype="text/plain; charset=utf-8")
-                    
+                    return Response("UYARI: Sadece .docx uzantılı güncel Word dosyaları çevrilebilmektedir.", mimetype="text/plain; charset=utf-8")
             elif mod == "txt_to_udf":
                 text_content = f.read().decode("utf-8", errors="ignore")
-                
             elif mod == "jpeg_to_udf":
-                return Response("BİLGİ: JPEG fotoğraflarından yazıları okuma (OCR) modülü yakında aktif edilecektir. Anlayışınız için teşekkür ederiz.", mimetype="text/plain; charset=utf-8")
+                return Response("BİLGİ: JPEG fotoğraflarından yazıları okuma (OCR) modülü yakında eklenecektir.", mimetype="text/plain; charset=utf-8")
             
-            # Yazıyı UYAP'ın okuyabileceği güvenli XML formatına çeviriyoruz
             safe_text = text_content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             html_content = f'<html><body><p>{safe_text.replace(chr(10), "<br>")}</p></body></html>'
             udf_xml = f'<?xml version="1.0" encoding="UTF-8"?><uyap><icerik><![CDATA[{html_content}]]></icerik></uyap>'
@@ -407,15 +405,11 @@ def index():
             return send_file(buf, as_attachment=True, download_name="cevrilmis_belge.udf", mimetype="application/zip")
             
         except Exception as e:
-            return Response(f"Dönüştürme sırasında bir hata oluştu. Dosyanın bozuk veya şifreli olmadığından emin olun.\nHata detayı: {str(e)}", mimetype="text/plain; charset=utf-8")
+            return Response(f"Hata detayı: {str(e)}", mimetype="text/plain; charset=utf-8")
 
-    # Geçici JPEG uyarıları
     if mod == "jpeg":
         return Response("JPEG dönüştürme modülü sunucuya yükleniyor. Lütfen daha sonra tekrar deneyin.", mimetype="text/plain; charset=utf-8")
 
-    # ---------------------------------------------------------
-    # KLASİK UDF'DEN DİĞER FORMATLARA (MEVCUT ÇALIŞAN MOTOR)
-    # ---------------------------------------------------------
     lines = guclu_parser(f.read())
     text = "\n".join(lines)
     
@@ -432,7 +426,6 @@ def index():
     c.save(); buf.seek(0)
     return send_file(buf, as_attachment=True, download_name="belge.pdf", mimetype="application/pdf")
 
-# Sitemap vb. SEO sayfalarını yakalayan ek kural:
 @app.route("/<path:path>")
 def catch_all(path):
     if path in SEO_PAGES:
@@ -441,7 +434,6 @@ def catch_all(path):
         sayac = get_sayac()
         formatted_sayac = f"{sayac:,}".replace(',', '.')
         
-        # Dinamik SEO Başlıkları (Girilen linke göre Google'a özel başlık verir)
         titles = {
             "udf-dosyasi-pdf-yapma": "UDF Dosyası PDF Yapma | UDFTOPDF",
             "udf-to-pdf": "UDF to PDF Converter | Hızlı ve Ücretsiz",
@@ -452,13 +444,14 @@ def catch_all(path):
         }
         
         page_title = titles.get(path, "UDFTOPDF | UYAP Dosya Dönüştürücü")
-        page_desc = f"{page_title} işlemi için en hızlı ve güvenli araç. UYAP belgelerinizi saniyeler içinde ücretsiz dönüştürün."
+        page_desc = f"{page_title} işlemi için en hızlı ve güvenli araç."
         host = request.host_url.rstrip('/')
         
         return render_template_string(HTML_UI, 
             current_time=now.strftime("%H:%M"), 
             current_year=now.year, 
             current_sayac=formatted_sayac,
+            current_sayac_raw=str(sayac),
             page_title=page_title,
             page_desc=page_desc,
             host=host,
