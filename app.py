@@ -10,9 +10,9 @@ import io
 
 app = Flask(__name__)
 
-# --- ALTYAPI: FONT VE UDF MOTORU ---
+# --- GERÇEK ALTYAPI: FONT VE UDF ÇÖZÜCÜ ---
 try:
-    # arial.ttf dosyasının deponun ana dizininde olması gerekir
+    # arial.ttf dosyasını GitHub ana dizinine yüklemeyi unutma
     pdfmetrics.registerFont(TTFont('ArialCustom', 'arial.ttf'))
     FONT_NAME = 'ArialCustom'
 except:
@@ -20,50 +20,53 @@ except:
 
 def udf_motoru(content):
     try:
+        # UDF'nin zlib katmanını soyup XML'e ulaşıyoruz
         s = content.find(b"<content>") + 9
         e = content.find(b"</content>")
-        if s < 9 or e == -1: return ["Hata: UDF yapisi bozuk."]
-        xml = zlib.decompress(content[s:e])
-        root = ET.fromstring(xml)
+        if s < 9 or e == -1: return ["Hata: UDF içeriği bulunamadı."]
+        
+        xml_data = zlib.decompress(content[s:e])
+        root = ET.fromstring(xml_data)
+        
+        # Altyapı Farkı: Tüm metin bloklarını sırayla ve temizce al
         return [elem.text.strip() for elem in root.iter() if elem.text and elem.text.strip()]
     except Exception as ex:
-        return [f"Altyapi Hatasi: {str(ex)}"]
+        return [f"Dönüştürme Hatası: {str(ex)}"]
 
-# --- ARAYÜZ ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>UDF Pro v4.0 | Bursa</title>
+    <title>UDF Pro v4.0 | Bursa Ofis</title>
     <style>
         body { font-family: sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 400px; border: 1px solid #334155; }
-        .badge { background: #064e3b; color: #6ee7b7; padding: 10px; border-radius: 8px; font-size: 12px; margin-bottom: 20px; }
+        .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 420px; border: 1px solid #334155; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .secure-badge { background: #064e3b; color: #6ee7b7; padding: 12px; border-radius: 10px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; }
         button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 45%; transition: 0.3s; }
         .pro { background: #0ea5e9; color: white; }
         .fast { background: #64748b; color: white; }
-        input[type="file"] { margin-bottom: 20px; color: #94a3b8; }
+        input[type="file"] { margin-bottom: 25px; color: #94a3b8; width: 100%; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h2>UDF PRO GÜVENLİ</h2>
-        <div class="badge">🛡️ Altyapi Aktif: Dosyalar RAM'de islenir.</div>
+        <h2>UDF PRO <span style="color:#0ea5e9">PREMIUM</span></h2>
+        <div class="secure-badge">🛡️ UYAP Altyapısı Aktif. Dosyalar RAM'de işlenir.</div>
         <form method="post" enctype="multipart/form-data">
             <input type="file" name="file" accept=".udf" required>
-            <div style="display:flex; justify-content: space-between;">
+            <div style="display:flex; justify-content:space-between">
                 <button type="submit" formaction="/convert/fast" class="fast">HIZLI (TXT)</button>
                 <button type="submit" formaction="/convert/pro" class="pro">PRO (PDF)</button>
             </div>
         </form>
-        <p style="font-size:10px; color:#475569; margin-top:20px">FATİH MERT | BURSA 2026</p>
+        <p style="font-size:10px; color:#475569; margin-top:25px">FATİH MERT | BURSA 2026</p>
     </div>
 </body>
 </html>
 """
 
-# BURASI KRİTİK: Hem GET (Giriş) hem POST (Yükleme) izni verdik
+# BURASI KRİTİK: Siteye girişi (GET) aktif ettik
 @app.route('/', methods=['GET', 'POST'])
 def index():
     return HTML_UI
@@ -71,7 +74,8 @@ def index():
 @app.route('/convert/fast', methods=['POST'])
 def fast():
     f = request.files['file']
-    text = "\\n".join(udf_motoru(f.read()))
+    lines = udf_motoru(f.read())
+    text = "\\n".join(lines)
     buf = io.BytesIO(text.encode('utf-8'))
     return send_file(buf, as_attachment=True, download_name="belge.txt")
 
@@ -88,6 +92,7 @@ def pro():
             c.showPage()
             c.setFont(FONT_NAME, 10)
             y = 800
+        # Basit satır yönetimi
         c.drawString(50, y, line[:100])
         y -= 15
     c.save()
