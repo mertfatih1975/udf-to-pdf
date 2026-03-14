@@ -64,20 +64,21 @@ HTML_UI = """
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    # Sayfaya ilk girişte (GET) arayüzü göster
     if request.method == 'GET':
         return render_template_string(HTML_UI)
     
-    # POST işlemi (Dönüştürme)
+    # Butona basıldığında (POST) dönüştürme yap
     if 'file' not in request.files: return "Dosya yok", 400
     file = request.files['file']
-    mode = request.form.get('mode')
+    mode = request.form.get('mode') # Hangi butona basıldı?
     
     lines = udf_motoru(file.read())
     
     if mode == 'fast':
-        text = "\n".join(lines)
+        text = "\\n".join(lines)
         buf = io.BytesIO(text.encode('utf-8'))
-        return send_file(buf, as_attachment=True, download_name="belge.txt", mimetype='text/plain')
+        return send_file(buf, as_attachment=True, download_name="ozet.txt", mimetype='text/plain')
     
     else: # PRO Modu (PDF)
         buf = io.BytesIO()
@@ -89,6 +90,7 @@ def index():
                 c.showPage()
                 c.setFont(FONT_NAME, 10)
                 y = 800
+            # Basit satır kısıtlaması
             text_line = line if len(line) < 95 else line[:92] + "..."
             c.drawString(50, y, text_line)
             y -= 15
