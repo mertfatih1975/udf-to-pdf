@@ -122,9 +122,7 @@ HTML_UI = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta name="description" content="UDF dosyalarını ücretsiz PDF, Word ve JPEG formatına dönüştürün. UYAP Doküman Formatı çevirici.">
-    
     <meta name="google-site-verification" content="aNpaoi0xHA1z8efKdzI2QOY1UkRhJpx7MURlOgyd9uE" />
-    
     <title>UDFTOPDF | UYAP Dosya Dönüştürücü</title>
     
     <link rel="manifest" href="/manifest.json">
@@ -323,17 +321,56 @@ def index():
     
     increment_sayac()
     
+    # ---------------------------------------------------------
+    # YENİ DÖNÜŞTÜRÜCÜ MOTOR (DİĞER FORMATLARDAN UDF'YE)
+    # ---------------------------------------------------------
+    if mod and "to_udf" in mod:
+        text_content = ""
+        try:
+            if mod == "pdf_to_udf":
+                import PyPDF2
+                reader = PyPDF2.PdfReader(f)
+                for page in reader.pages:
+                    extracted = page.extract_text()
+                    if extracted:
+                        text_content += extracted + "\n"
+                        
+            elif mod == "word_to_udf":
+                filename = f.filename.lower()
+                if filename.endswith(".docx"):
+                    import docx
+                    doc = docx.Document(f)
+                    text_content = "\n".join([para.text for para in doc.paragraphs])
+                else:
+                    return Response("UYARI: Şu an sadece '.docx' uzantılı güncel Word dosyaları çevrilebilmektedir. Lütfen eski sürüm (.doc) dosyanızı bilgisayarınızda açıp 'Farklı Kaydet' diyerek '.docx' olarak kaydedip tekrar deneyin.", mimetype="text/plain; charset=utf-8")
+                    
+            elif mod == "txt_to_udf":
+                text_content = f.read().decode("utf-8", errors="ignore")
+                
+            elif mod == "jpeg_to_udf":
+                return Response("BİLGİ: JPEG fotoğraflarından yazıları okuma (OCR) modülü yakında aktif edilecektir. Anlayışınız için teşekkür ederiz.", mimetype="text/plain; charset=utf-8")
+            
+            # Yazıyı UYAP'ın okuyabileceği güvenli XML formatına çeviriyoruz
+            safe_text = text_content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            html_content = f'<html><body><p>{safe_text.replace(chr(10), "<br>")}</p></body></html>'
+            udf_xml = f'<?xml version="1.0" encoding="UTF-8"?><uyap><icerik><![CDATA[{html_content}]]></icerik></uyap>'
+            
+            buf = io.BytesIO()
+            with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+                zf.writestr('content.xml', udf_xml.encode('utf-8'))
+            buf.seek(0)
+            return send_file(buf, as_attachment=True, download_name="cevrilmis_belge.udf", mimetype="application/zip")
+            
+        except Exception as e:
+            return Response(f"Dönüştürme sırasında bir hata oluştu. Dosyanın bozuk veya şifreli olmadığından emin olun.\nHata detayı: {str(e)}", mimetype="text/plain; charset=utf-8")
+
+    # Geçici JPEG uyarıları
     if mod == "jpeg":
         return Response("JPEG dönüştürme modülü sunucuya yükleniyor. Lütfen daha sonra tekrar deneyin.", mimetype="text/plain; charset=utf-8")
-        
-    if mod and "to_udf" in mod:
-        dummy_xml = '<?xml version="1.0" encoding="UTF-8"?><uyap><icerik>Bu dosya donusturulmustur.</icerik></uyap>'
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr('content.xml', dummy_xml)
-        buf.seek(0)
-        return send_file(buf, as_attachment=True, download_name="cevrilmis_belge.udf", mimetype="application/zip")
 
+    # ---------------------------------------------------------
+    # KLASİK UDF'DEN DİĞER FORMATLARA (MEVCUT ÇALIŞAN MOTOR)
+    # ---------------------------------------------------------
     lines = guclu_parser(f.read())
     text = "\n".join(lines)
     
