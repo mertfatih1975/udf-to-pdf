@@ -15,12 +15,11 @@ app = Flask(__name__)
 # --- GÜVENLİK: HTTP -> HTTPS YÖNLENDİRMESİ ---
 @app.before_request
 def redirect_to_https():
-    # Railway proxy başlıklarını kontrol eder
     if request.headers.get('X-Forwarded-Proto', 'http') == 'http':
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
 
-# --- UDF PARSER (v28.5) ---
+# --- UDF PARSER ---
 def guclu_parser(data):
     try:
         try:
@@ -57,41 +56,42 @@ HTML_UI = """
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>UDFTOPDF | İstanbul Türkiye</title>
+    <title>UDFTOPDF | UYAP Dosya Dönüştürücü</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 480px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+        .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 550px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
         .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 18px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; text-align: left; }
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         button { border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; opacity: 0.3; pointer-events: none; }
         button.active { opacity: 1; pointer-events: auto; }
         .pdf { background: #0ea5e9; grid-column: span 2; font-size: 16px; }
         .word { background: #2b579a; } .txt { background: #64748b; }
-        input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; }
+        input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; cursor: pointer; }
         .footer { margin-top: 30px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
         .time-label { color: #38bdf8; font-weight: bold; font-size: 14px; margin-bottom: 10px; }
+        h1 { color:#38bdf8; font-size: 22px; line-height: 1.4; margin-bottom: 15px; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h1 style="color:#38bdf8; font-size: 32px; letter-spacing: 2px; margin-bottom: 10px;">UDFTOPDF</h1>
+        <h1>Uyap Uzantılı Dosyalarınızı<br>Güvenle Dönüştürebilirsiniz</h1>
         <div class="time-label">🕒 {{ current_time }}</div>
-        <div class="security-badge">🔒 <b>Sayın kullanıcımız;</b> Dosyalarınız hiçbir şekilde saklanmaz, anlık işlenir ve kalıcı olarak silinir.</div>
+        <div class="security-badge">🔒 <b>Güvenlik:</b> Yüklediğiniz dosyalar sunucuda depolanmaz, RAM üzerinden anlık işlenir ve kalıcı olarak silinir.</div>
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
             <input type="file" name="file" id="fIn" accept=".udf" required>
             <label style="margin: 20px 0; font-size: 12px; display: block; cursor: pointer;">
-                <input type="checkbox" id="kvkk" onchange="toggleBtns()"> KVKK Aydınlatma Metnini onaylıyorum.
+                <input type="checkbox" id="kvkk" onchange="toggleBtns()"> KVKK Aydınlatma Metnini okudum ve onaylıyorum.
             </label>
             <div class="btn-group">
-                <button type="submit" name="mod" value="pdf" id="btnPdf" class="pdf">PRO PDF OLARAK DÖNÜŞTÜR</button>
-                <button type="submit" name="mod" value="word" id="btnWord" class="word">WORD (DOC)</button>
-                <button type="submit" name="mod" value="txt" id="btnTxt" class="txt">TEXT (TXT)</button>
+                <button type="submit" name="mod" value="pdf" id="btnPdf" class="pdf">PDF OLARAK DÖNÜŞTÜR</button>
+                <button type="submit" name="mod" value="word" id="btnWord" class="word">WORD YAP</button>
+                <button type="submit" name="mod" value="txt" id="btnTxt" class="txt">TXT YAP</button>
             </div>
         </form>
     </div>
     <div class="footer">
-        🛡️ SSL Güvenli Bağlantı Aktif <br>
-        © {{ current_year }} UDFTOPDF | İstanbul - Türkiye
+        🛡️ SSL Güvenli Bağlantı Aktif | İstanbul - Türkiye <br>
+        © {{ current_year }} UDFTOPDF - Tüm Hakları Saklıdır.
     </div>
     <script>
         function toggleBtns() {
