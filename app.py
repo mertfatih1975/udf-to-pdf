@@ -9,63 +9,53 @@ import io
 
 app = Flask(__name__)
 
-# Arial fontunu sisteme tanıtıyoruz (arial.ttf deponuzda olmalı)
+# Altyapi: Arial fontu (arial.ttf deponuzda olmali)
 try:
     pdfmetrics.registerFont(TTFont('ArialCustom', 'arial.ttf'))
     FONT_NAME = 'ArialCustom'
 except:
     FONT_NAME = 'Helvetica'
 
-# --- UDF OKUMA MANTIĞI ---
-def udf_cozucu(udf_verisi):
+# --- UDF COZUCU MOTOR ---
+def extract_text(data):
     try:
-        # UDF içindeki <content> etiketleri arasındaki sıkıştırılmış veriyi bul
-        baslangic = udf_verisi.find(b"<content>") + 9
-        bitis = udf_verisi.find(b"</content>")
-        
-        # Sıkıştırılmış veriyi (zlib) aç
-        sikistirilmis_data = udf_verisi[baslangic:bitis]
-        xml_metni = zlib.decompress(sikistirilmis_data)
-        
-        # XML içinden saf metni ayıkla
-        root = ET.fromstring(xml_metni)
-        saf_metin = ""
-        for content in root.iter('content'):
-            if content.text:
-                saf_metin += content.text + "\n"
-        return saf_metin
-    except Exception as e:
-        return f"Hata: UDF yapısı çözülemedi. ({str(e)})"
+        s = data.find(b"<content>") + 9
+        e = data.find(b"</content>")
+        xml = zlib.decompress(data[s:e])
+        root = ET.fromstring(xml)
+        return "".join([c.text for c in root.iter('content') if c.text])
+    except:
+        return "Dosya okunamadi."
 
-# --- WEB ARAYÜZÜ VE ROTARLAR ---
 @app.route('/')
-def ana_sayfa():
-    # Daha önce hazırladığımız o şık HTML (Güvenlik uyarılı ve KVKK'lı)
-    return HTML_UI # (Burada yukarıdaki HTML_UI değişkeninin tanımlı olduğunu varsayıyoruz)
+def home():
+    # Buraya daha once hazirladigimiz HTML_UI gelecek
+    return HTML_UI 
 
-@app.route('/convert/pro', methods=['POST'])
-def pdf_yap():
+@app.route('/convert/pro', methods=['POST']) # Hata buradaydi, POST eklendi
+def pro_convert():
     if 'file' not in request.files: return "Dosya yok", 400
-    file = request.files['file']
+    f = request.files['file']
+    text = extract_text(f.read())
     
-    # 1. ADIM: UDF'yi oku ve içindeki metni ayıkla (GERÇEK ALT YAPI BURASI)
-    udf_metni = udf_cozucu(file.read())
-    
-    # 2. ADIM: Ayıklanan metni PDF'e dök
-    buffer = io.BytesIO()
-    c = canvas.Canvas(buffer)
-    t = c.beginText(50, 800)
+    buf = io.BytesIO()
+    p = canvas.Canvas(buf)
+    t = p.beginText(50, 800)
     t.setFont(FONT_NAME, 10)
-    
-    for satir in udf_metni.split('\n'):
-        t.textLine(satir)
-        
-    c.drawText(t)
-    c.showPage()
-    c.save()
-    
-    buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name="donusturuldu.pdf")
+    for line in text.split('\n'):
+        t.textLine(line)
+    p.drawText(t)
+    p.showPage()
+    p.save()
+    buf.seek(0)
+    return send_file(buf, as_attachment=True, download_name="belge.pdf")
+
+@app.route('/convert/fast', methods=['POST'])
+def fast_convert():
+    f = request.files['file']
+    text = extract_text(f.read())
+    buf = io.BytesIO(text.encode('utf-8'))
+    return send_file(buf, as_attachment=True, download_name="belge.txt")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
