@@ -13,6 +13,9 @@ import json
 
 app = Flask(__name__)
 
+# --- SEO SAYFALARI (Sitemap İçin) ---
+SEO_PAGES = ["udf-dosyasi-pdf-yapma", "udf-to-pdf", "uyap-udf-converter", "udf-dosyasi-acma", "udf-to-word", "jpeg-to-udf"]
+
 # --- SAYAÇ SİSTEMİ ---
 SAYAC_DOSYASI = "sayac.txt"
 
@@ -65,6 +68,22 @@ def parse_xml_to_lines(xml_content):
         return lines if lines else [re.sub(r'<[^>]+>', ' ', xml_str).strip()]
     except: return [re.sub(r'<[^>]+>', ' ', xml_content.decode("utf-8", errors="ignore")).strip()]
 
+# --- SEO: SITEMAP & ROBOTS.TXT ---
+@app.route("/robots.txt")
+def robots():
+    # Arama motorlarına sitemizi tarama izni veriyoruz ve haritanın yerini gösteriyoruz
+    host = request.host_url.rstrip('/')
+    txt = f"User-agent: *\nAllow: /\nSitemap: {host}/sitemap.xml"
+    return Response(txt, mimetype="text/plain")
+
+@app.route("/sitemap.xml")
+def sitemap():
+    host = request.host_url.rstrip('/')
+    urls = f"<url><loc>{host}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>"
+    for p in SEO_PAGES: 
+        urls += f"<url><loc>{host}/{p}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>"
+    return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', mimetype="text/xml")
+
 # --- MOBİL UYGULAMA (PWA) ---
 @app.route("/manifest.json")
 def manifest():
@@ -99,6 +118,9 @@ HTML_UI = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta name="description" content="UDF dosyalarını ücretsiz PDF, Word ve JPEG formatına dönüştürün. UYAP Doküman Formatı çevirici.">
+    
+    <meta name="google-site-verification" content="aNpaoi0xHA1z8efKdzI2QOY1UkRhJpx7MURlOgyd9uE" />
+    
     <title>UDFTOPDF | UYAP Dosya Dönüştürücü</title>
     
     <link rel="manifest" href="/manifest.json">
@@ -119,7 +141,6 @@ HTML_UI = """
         .trust-points b { color: #f8fafc; }
         .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 15px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; text-align: left; line-height: 1.5; }
         
-        /* BUTON TASARIMLARI */
         .section-title { font-size: 14px; font-weight: bold; margin-bottom: 10px; margin-top: 15px; display: block; }
         .title-down { color: #38bdf8; }
         .title-up { color: #10b981; margin-top: 25px; }
@@ -286,7 +307,6 @@ def index():
     now = datetime.now(tz)
     
     if request.method == "GET":
-        # Sayacı dosyadan oku ve formatla (11.535 şeklinde)
         sayac = get_sayac()
         formatted_sayac = f"{sayac:,}".replace(',', '.')
         
@@ -297,10 +317,8 @@ def index():
     f = request.files.get("file")
     mod = request.form.get("mod")
     
-    # İşlem yapıldığında sayacı artır
     increment_sayac()
     
-    # Geçici dönüşümler
     if mod == "jpeg":
         return Response("JPEG dönüştürme modülü sunucuya yükleniyor. Lütfen daha sonra tekrar deneyin.", mimetype="text/plain; charset=utf-8")
         
@@ -312,7 +330,6 @@ def index():
         buf.seek(0)
         return send_file(buf, as_attachment=True, download_name="cevrilmis_belge.udf", mimetype="application/zip")
 
-    # Klasik UDF dönüşümleri
     lines = guclu_parser(f.read())
     text = "\n".join(lines)
     
@@ -328,6 +345,18 @@ def index():
         c.drawString(50, y, line[:95]); y -= 18
     c.save(); buf.seek(0)
     return send_file(buf, as_attachment=True, download_name="belge.pdf", mimetype="application/pdf")
+
+# Sitemap vb. SEO sayfalarını yakalayan ek kural:
+@app.route("/<path:path>")
+def catch_all(path):
+    # Eğer doğrudan ulaşılan sayfa sitemap listesindeyse ana sayfayı göster (SEO için)
+    if path in SEO_PAGES:
+        tz = pytz.timezone('Europe/Istanbul')
+        now = datetime.now(tz)
+        sayac = get_sayac()
+        formatted_sayac = f"{sayac:,}".replace(',', '.')
+        return render_template_string(HTML_UI, current_time=now.strftime("%H:%M"), current_year=now.year, current_sayac=formatted_sayac)
+    return "404 Not Found", 404
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
