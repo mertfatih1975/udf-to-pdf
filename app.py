@@ -51,7 +51,7 @@ def parse_xml_to_lines(xml_content):
         return lines if lines else [re.sub(r'<[^>]+>', ' ', xml_str).strip()]
     except: return [re.sub(r'<[^>]+>', ' ', xml_content.decode("utf-8", errors="ignore")).strip()]
 
-# --- MOBİL UYGULAMA (PWA) GEREKSİNİMLERİ ---
+# --- MOBİL UYGULAMA (PWA) ---
 @app.route("/manifest.json")
 def manifest():
     data = {
@@ -189,7 +189,6 @@ HTML_UI = """
         <ul>
             <li>UYAP üzerinden indirdiğiniz <b>.udf dosyasını</b> yükleme alanına sürükleyin.</li>
             <li><b>PDF formatını</b> seçin.</li>
-            <li>Düzenlenebilir metin veya görsel mod tercihini yapın.</li>
             <li>Dönüştür butonuna tıklayın ve PDF'yi indirin.</li>
         </ul>
         <p><b>UDF dönüştürücü</b> aracımız, avukatlar, hakimler, savcılar ve adli işlerle ilgilenen her kullanıcı için tasarlanmıştır. <b>UYAP UDF belge dönüştürme</b> işlemi ücretsiz ve kayıtsız kullanılabilir.</p>
