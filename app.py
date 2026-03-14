@@ -12,16 +12,15 @@ import pytz
 
 app = Flask(__name__)
 
-# --- SEO SAYFALARI ---
-SEO_PAGES = ["udf-to-pdf", "udf-to-word", "udf-to-txt", "uyap-udf-converter", "udf-dosyasi-acma", "udf-viewer"]
-
-# --- HTTPS YÖNLENDİRMESİ ---
+# --- GÜVENLİK: HTTP -> HTTPS YÖNLENDİRMESİ ---
 @app.before_request
-def before_request():
-    if request.headers.get('X-Forwarded-Proto') == 'http':
-        return redirect(request.url.replace('http://', 'https://', 1), code=301)
+def redirect_to_https():
+    # Railway proxy başlıklarını kontrol eder
+    if request.headers.get('X-Forwarded-Proto', 'http') == 'http':
+        url = request.url.replace('http://', 'https://', 1)
+        return redirect(url, code=301)
 
-# --- UDF PARSER ---
+# --- UDF PARSER (v28.5) ---
 def guclu_parser(data):
     try:
         try:
@@ -58,8 +57,7 @@ HTML_UI = """
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>{{ seo_title or 'UDFTOPDF | Ücretsiz UYAP UDF Dönüştürücü' }}</title>
+    <title>UDFTOPDF | İstanbul Türkiye</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
         .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 480px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
@@ -71,14 +69,14 @@ HTML_UI = """
         .word { background: #2b579a; } .txt { background: #64748b; }
         input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; }
         .footer { margin-top: 30px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
-        .time-info { color: #38bdf8; font-weight: bold; margin-bottom: 10px; font-size: 14px; }
+        .time-label { color: #38bdf8; font-weight: bold; font-size: 14px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <div class="box">
         <h1 style="color:#38bdf8; font-size: 32px; letter-spacing: 2px; margin-bottom: 10px;">UDFTOPDF</h1>
-        <div class="time-info">🕒 {{ current_time }}</div>
-        <div class="security-badge">🔒 <b>Sayın kullanıcımız;</b> Dosyalarınız sunucuda saklanmaz, anlık işlenir ve kalıcı olarak silinir.</div>
+        <div class="time-label">🕒 {{ current_time }}</div>
+        <div class="security-badge">🔒 <b>Sayın kullanıcımız;</b> Dosyalarınız hiçbir şekilde saklanmaz, anlık işlenir ve kalıcı olarak silinir.</div>
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
             <input type="file" name="file" id="fIn" accept=".udf" required>
             <label style="margin: 20px 0; font-size: 12px; display: block; cursor: pointer;">
@@ -92,9 +90,8 @@ HTML_UI = """
         </form>
     </div>
     <div class="footer">
-        🛡️ 256-Bit SSL Sertifikası ile Korunmaktadır <br>
-        © {{ current_year }} UDFTOPDF | İstanbul - Türkiye <br>
-        Tüm Hakları Saklıdır.
+        🛡️ SSL Güvenli Bağlantı Aktif <br>
+        © {{ current_year }} UDFTOPDF | İstanbul - Türkiye
     </div>
     <script>
         function toggleBtns() {
@@ -114,13 +111,8 @@ HTML_UI = """
 def index():
     tz = pytz.timezone('Europe/Istanbul')
     now = datetime.now(tz)
-    time_str = now.strftime("%d.%m.%Y - %H:%M")
-    year_str = now.year
-
     if request.method == "GET":
-        resp = make_response(render_template_string(HTML_UI, current_time=time_str, current_year=year_str))
-        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        return resp
+        return render_template_string(HTML_UI, current_time=now.strftime("%d.%m.%Y - %H:%M"), current_year=now.year)
     
     f = request.files.get("file")
     mod = request.form.get("mod")
