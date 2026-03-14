@@ -8,12 +8,12 @@ from reportlab.lib.pagesizes import A4
 import io
 import re
 from datetime import datetime
-import pytz # Saat dilimi için
+import pytz
 
 app = Flask(__name__)
 
 # --- SEO SAYFALARI ---
-SEO_PAGES = ["udf-to-pdf", "udf-to-word", "udf-to-txt", "uyap-udf-converter", "udf-dosyasi-acma", "udf-viewer", "udf-to-doc", "udf-belgesi-acma", "udf-to-pdf-online", "uyap-belgesi-ac", "udf-to-pdf-free", "udf-uyap-pdf"]
+SEO_PAGES = ["udf-to-pdf", "udf-to-word", "udf-to-txt", "uyap-udf-converter", "udf-dosyasi-acma", "udf-viewer"]
 
 # --- HTTPS YÖNLENDİRMESİ ---
 @app.before_request
@@ -60,7 +60,6 @@ HTML_UI = """
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>{{ seo_title or 'UDFTOPDF | Ücretsiz UYAP UDF Dönüştürücü' }}</title>
-    <meta name="description" content="UDF dosyalarını ücretsiz PDF ve Word formatına dönüştürün. İstanbul Türkiye merkezli güvenli servis.">
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
         .box { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; width: 480px; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
@@ -72,12 +71,12 @@ HTML_UI = """
         .word { background: #2b579a; } .txt { background: #64748b; }
         input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; }
         .footer { margin-top: 30px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
-        .time-info { color: #38bdf8; font-weight: bold; margin-bottom: 5px; }
+        .time-info { color: #38bdf8; font-weight: bold; margin-bottom: 10px; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h1 style="color:#38bdf8; font-size: 32px; letter-spacing: 2px; margin-bottom: 10px;">{{ h1_label or 'UDFTOPDF' }}</h1>
+        <h1 style="color:#38bdf8; font-size: 32px; letter-spacing: 2px; margin-bottom: 10px;">UDFTOPDF</h1>
         <div class="time-info">🕒 {{ current_time }}</div>
         <div class="security-badge">🔒 <b>Sayın kullanıcımız;</b> Dosyalarınız sunucuda saklanmaz, anlık işlenir ve kalıcı olarak silinir.</div>
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
@@ -113,7 +112,6 @@ HTML_UI = """
 
 @app.route("/", methods=["GET","POST"])
 def index():
-    # Türkiye saat dilimini ayarla
     tz = pytz.timezone('Europe/Istanbul')
     now = datetime.now(tz)
     time_str = now.strftime("%d.%m.%Y - %H:%M")
@@ -141,13 +139,6 @@ def index():
         c.drawString(50, y, line[:95]); y -= 18
     c.save(); buf.seek(0)
     return send_file(buf, as_attachment=True, download_name="belge.pdf", mimetype="application/pdf")
-
-@app.route("/sitemap.xml")
-def sitemap():
-    base = "https://udf-to-pdf-production.up.railway.app"
-    urls = f"<url><loc>{base}/</loc></url>"
-    for p in SEO_PAGES: urls += f"<url><loc>{base}/{p}</loc></url>"
-    return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', mimetype="text/xml")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
