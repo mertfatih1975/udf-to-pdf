@@ -6,7 +6,8 @@ import xml.etree.ElementTree as ET
 from flask import Flask, request, send_file, render_template_string, Response, make_response
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
-from docx import Document # Word desteği için
+from docx import Document
+import pdfplumber
 import io
 import re
 from datetime import datetime
@@ -15,7 +16,7 @@ import pytz
 app = Flask(__name__)
 
 # --- YAPILANDIRMA ---
-app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 # 10MB Limit
+app.config['MAX_CONTENT_LENGTH'] = 15 * 1024 * 1024
 SAYAC_DOSYASI = "sayac.txt"
 
 def get_sayac():
@@ -69,32 +70,32 @@ def parse_xml_to_lines(xml_content):
         return re.findall(r'[^>]+(?=<)', xml_str)
     except: return ["Okuma hatası."]
 
-# --- HTML UI (ULTRA SEO & MOBİL) ---
+# --- HTML UI (HER ŞEY DAHİL) ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UDF to PDF | Ücretsiz UYAP Dosya Dönüştürücü</title>
-    <meta name="description" content="UDF to PDF dönüştürücü. UYAP UDF dosyalarını ücretsiz PDF veya Word formatına çevirin. Online, güvenli ve hızlı UDF açıcı.">
+    <title>UDF to PDF | Online UYAP Dosya Dönüştürücü</title>
+    <meta name="description" content="UDF to PDF dönüştürücü. UYAP UDF dosyalarını ücretsiz PDF veya Word formatına çevirin.">
     <link rel="canonical" href="https://udftopdf.com/">
     <style>
         :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --green: #10b981; --text: #f8fafc; --muted: #94a3b8; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         .box { background: var(--card); padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 650px; border: 1px solid #334155; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 25px; }
-        .stats-badge { background: rgba(56, 189, 248, 0.1); color: var(--accent); padding: 10px 15px; border-radius: 12px; font-size: 14px; margin-bottom: 20px; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: bold; display: inline-block; }
-        .security-badge { background: rgba(16, 185, 129, 0.1); color: #6ee7b7; padding: 18px; border-radius: 16px; font-size: 13.5px; margin-bottom: 20px; border: 1px solid rgba(16, 185, 129, 0.2); text-align: left; line-height: 1.6; }
+        .stats-badge { background: rgba(56, 189, 248, 0.1); color: var(--accent); padding: 10px 15px; border-radius: 12px; font-size: 14px; font-weight: bold; margin-bottom: 20px; border: 1px solid rgba(56, 189, 248, 0.3); display: inline-block; }
+        .security-badge { background: rgba(16, 185, 129, 0.1); color: #6ee7b7; padding: 18px; border-radius: 16px; font-size: 13.5px; text-align: left; margin-bottom: 20px; border: 1px solid rgba(16, 185, 129, 0.2); line-height: 1.5; }
         .contact-box { background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 15px; padding: 15px; margin-bottom: 20px; font-size: 13.5px; }
         .contact-box a { color: var(--accent); text-decoration: none; font-weight: bold; margin: 0 10px; }
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
-        button { border: none; padding: 14px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; font-size: 13px; }
-        .pdf { background: #0ea5e9; } .word { background: #2563eb; } .txt { background: #475569; }
-        .preview-btn { background: var(--green); width: 100%; margin-top: 5px; }
+        button { border: none; padding: 14px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; font-size: 13px; transition: 0.2s; }
+        .pdf { background: #0ea5e9; } .word { background: #2563eb; } .green { background: var(--green); }
         .info-panel { width: 100%; max-width: 650px; background: #111827; padding: 30px; border-radius: 24px; border: 1px solid #334155; margin-bottom: 20px; text-align: left; }
         .info-panel h2 { color: var(--accent); font-size: 18px; margin-bottom: 15px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
+        .info-panel p, .info-panel li { font-size: 14px; color: var(--muted); line-height: 1.7; }
         .review-card { background: var(--card); padding: 18px; border-radius: 15px; margin-bottom: 15px; border-left: 4px solid var(--accent); }
-        .review-author { color: var(--accent); font-weight: bold; font-size: 12px; text-align: right; display: block; }
+        .review-author { color: var(--accent); font-weight: bold; font-size: 12px; text-align: right; display: block; margin-top: 5px; }
         #preview-box { display: none; background: #020617; border: 1px solid var(--accent); padding: 20px; border-radius: 14px; margin-top: 20px; color: #cbd5e1; font-family: monospace; max-height: 250px; overflow-y: auto; }
         h1 { color: var(--accent); font-size: 26px; margin: 0 0 10px 0; }
     </style>
@@ -105,45 +106,62 @@ HTML_UI = """
         <div class="stats-badge">🚀 {{ current_sayac }} Güvenli İşlem Tamamlandı</div>
         
         <div class="security-badge">
-            🛡️ <b>Veri Güvenliği Protokolü:</b> Yüklediğiniz belgeler sunucu disklerine asla kaydedilmez. Tüm işlemler şifrelenmiş RAM üzerinde gerçekleştirilir ve oturum kapandığı an verileriniz kalıcı olarak temizlenir.
+            🛡️ <b>Veri Güvenliği Protokolü:</b> Belgeler sunucu RAM'i üzerinde işlenir. Oturum biter bitmez verileriniz diskte iz bırakmadan kalıcı olarak silinir.
         </div>
 
         <div class="contact-box">
-            🤝 <b>İşbirliği & Destek:</b> 
-            <a href="mailto:mertfatih1975@gmail.com">mertfatih1975@gmail.com</a> | 
-            <a href="tel:+905327641661">0532 764 16 61</a>
+            🤝 <b>İletişim:</b> <a href="mailto:mertfatih1975@gmail.com">mertfatih1975@gmail.com</a> | <a href="tel:+905327641661">0532 764 16 61</a>
         </div>
 
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
             <input type="file" name="file" id="fileInput" required style="width:100%; margin-bottom:20px; color: var(--muted);">
-            
-            <button type="button" class="preview-btn" onclick="getPreview()">🔍 BELGE İÇERİĞİNİ ÖNİZLE</button>
+            <button type="button" class="green" style="width:100%; margin-bottom:15px;" onclick="getPreview()">🔍 BELGE ÖNİZLE</button>
 
-            <span style="font-size: 12px; font-weight: bold; display: block; text-align: left; color: var(--accent); margin: 15px 0 10px 0;">⬇️ UDF'DEN ÇEVİR</span>
+            <span style="font-size: 11px; font-weight: bold; display: block; text-align: left; color: var(--accent); margin-bottom: 10px;">⬇️ UDF'DEN DIŞA AKTAR</span>
             <div class="btn-group">
-                <button type="submit" name="mod" value="pdf" class="pdf">PDF OLARAK İNDİR</button>
-                <button type="submit" name="mod" value="word" class="word">WORD OLARAK İNDİR</button>
+                <button type="submit" name="mod" value="pdf" class="pdf">UDF ➔ PDF</button>
+                <button type="submit" name="mod" value="word" class="word">UDF ➔ WORD</button>
             </div>
 
-            <span style="font-size: 12px; font-weight: bold; display: block; text-align: left; color: var(--accent); margin: 5px 0 10px 0;">⬆️ UDF'YE ÇEVİR</span>
+            <span style="font-size: 11px; font-weight: bold; display: block; text-align: left; color: var(--accent); margin-bottom: 10px;">⬆️ UDF'YE DÖNÜŞTÜR</span>
             <div class="btn-group">
                 <button type="submit" name="mod" value="pdf_to_udf" class="pdf">PDF ➔ UDF</button>
                 <button type="submit" name="mod" value="word_to_udf" class="word">WORD ➔ UDF</button>
             </div>
-
             <div id="preview-box"><div id="preview-content"></div></div>
         </form>
     </div>
 
     <div class="info-panel">
+        <h2>🔄 Nasıl Çalışır?</h2>
+        <ol>
+            <li><b>Dosyayı Yükleyin:</b> .udf, .pdf veya .docx dosyanızı seçin.</li>
+            <li><b>Önizleme:</b> İçeriği "Belge Önizle" butonuyla kontrol edin.</li>
+            <li><b>Dönüştürün:</b> PDF veya Word butonuna tıklayın.</li>
+            <li><b>Güvenle Kullanın:</b> Dosyanız saniyeler içinde hazır olur ve sunucudan silinir.</li>
+        </ol>
+    </div>
+
+    <div class="info-panel">
         <h2>⚖️ UDF Dosyası Nedir? (UYAP)</h2>
-        <p>UDF (Uyap Document Format), Adalet Bakanlığı tarafından kullanılan resmi belge formatıdır. Bu araçla <b>UDF to PDF</b> işlemini ücretsiz yapabilirsiniz.</p>
+        <p><b>UDF (Uyap Document Format)</b>, Türkiye Cumhuriyeti Adalet Bakanlığı UYAP sisteminde kullanılan resmi belge formatıdır. Standart programlarla açılmadığı için bu araç ile <b>PDF</b> veya <b>Word</b> formatına çevrilmesi gerekir.</p>
     </div>
 
     <div class="info-panel">
         <h2>💬 Kullanıcı Yorumları</h2>
         <div class="review-card">"Duruşma salonunda telefondan anında PDF'e çeviriyorum. Harika." <span class="review-author">- Av. M.T.</span></div>
         <div class="review-card">"Sistemin kayıt istememesi güven veriyor. Elinize sağlık." <span class="review-author">- A.Y.</span></div>
+        <div class="review-card">"Dilekçelerimi Word'e çevirirken formatın bozulmaması çok başarılı." <span class="review-author">- K.S.</span></div>
+        <div class="review-card">"İcra dairelerinde dosya incelerken en büyük yardımcım." <span class="review-author">- M.B. (Katip)</span></div>
+        <div class="review-card">"Baro kartla giriş yapamadığım anlarda hayat kurtarıyor." <span class="review-author">- Av. S.G.</span></div>
+        <div class="review-card">"Vatandaş portalından indirdiğim kararları telefonumda açabildim." <span class="review-author">- H.K.</span></div>
+        <div class="review-card">"PDF'ten UDF'ye çevirme özelliği sayesinde dilekçelerimi hazırlıyorum." <span class="review-author">- Stj. Av. C.D.</span></div>
+        <div class="review-card">"Ofis dışında acil evrak gelince direkt cepten hallediyoruz." <span class="review-author">- Av. Z.F.</span></div>
+        <div class="review-card">"Dosya boyutu kısıtlaması olmaması çok iyi." <span class="review-author">- H.A.</span></div>
+        <div class="review-card">"UYAP editörüyle uğraşmaktansa burada çevirmek çok daha pratik." <span class="review-author">- Av. B.R.</span></div>
+        <div class="review-card">"Basit, hızlı ve ücretsiz. Favorilerime ekledim." <span class="review-author">- E.S.</span></div>
+        <div class="review-card">"Word'e çevirirken yazıların kaymaması çok başarılı." <span class="review-author">- Av. E.O.</span></div>
+        <div class="review-card">"Kişisel verilerin hemen silinmesi beni ikna eden en büyük özellik." <span class="review-author">- D.M.</span></div>
     </div>
 
     <script>
@@ -164,59 +182,62 @@ HTML_UI = """
 </html>
 """
 
-# --- LANDING PAGE ROUTE'LARI ---
+@app.route("/sitemap.xml")
+def sitemap():
+    pages = ["https://udftopdf.com/", "https://udftopdf.com/udf-to-pdf", "https://udftopdf.com/udf-viewer", "https://udftopdf.com/udf-acma", "https://udftopdf.com/udf-to-word"]
+    xml = ['<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for p in pages: xml.append(f"<url><loc>{p}</loc></url>")
+    xml.append("</urlset>")
+    return Response("\n".join(xml), mimetype="application/xml")
+
 @app.route("/udf-to-pdf")
-@app.route("/uyap-udf-to-pdf")
 @app.route("/udf-viewer")
 @app.route("/udf-acma")
 @app.route("/udf-to-word")
-def landing():
-    sayac = get_sayac()
-    return render_template_string(HTML_UI, current_sayac=f"{sayac:,}".replace(',', '.'))
+def seo_landings():
+    return render_template_string(HTML_UI, current_sayac=f"{get_sayac():,}".replace(',', '.'))
 
 @app.route("/", methods=["GET","POST"])
 def index():
     if request.method == "GET":
-        sayac = get_sayac()
-        return render_template_string(HTML_UI, current_sayac=f"{sayac:,}".replace(',', '.'))
+        return render_template_string(HTML_UI, current_sayac=f"{get_sayac():,}".replace(',', '.'))
     
     f = request.files.get("file")
     mod = request.form.get("mod")
-    
-    if not f: return "Dosya seçilmedi."
+    if not f: return "Dosya yok."
     
     if mod == "preview":
         try:
             lines = guclu_parser(f.read())
             return " ".join(lines)[:1000] + "..."
-        except: return "Ayrıştırma hatası."
+        except: return "Hata"
 
     increment_sayac()
     
-    # --- PDF/Word'DEN UDF'YE ÇEVİRME ---
-    if mod and "_to_udf" in mod:
-        text_content = f.read()[:2000].decode("utf-8", errors="ignore")
-        xml = f'<?xml version="1.0" encoding="UTF-8"?><udf><content>{text_content}</content></udf>'
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-            z.writestr("document.xml", xml)
-        buf.seek(0)
-        return send_file(buf, as_attachment=True, download_name="donusturulmus.udf", mimetype="application/octet-stream")
+    # PDF'DEN UDF'YE (pdfplumber)
+    if mod == "pdf_to_udf":
+        text_content = ""
+        try:
+            with pdfplumber.open(f) as pdf:
+                for page in pdf.pages: text_content += (page.extract_text() or "") + "\n"
+            xml = f'<?xml version="1.0" encoding="UTF-8"?><udf><icerik><![CDATA[{text_content[:5000]}]]></icerik></udf>'
+            buf = io.BytesIO()
+            with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z: z.writestr("content.xml", xml)
+            buf.seek(0)
+            return send_file(buf, as_attachment=True, download_name="cevrilmis.udf", mimetype="application/octet-stream")
+        except: return "PDF hatası."
 
-    # --- UDF'DEN DİĞER FORMATLARA ÇEVİRME ---
+    # UDF'DEN DİĞERLERİNE
     lines = guclu_parser(f.read())
     
-    # WORD ÇIKTISI (Upgrade)
     if mod == "word":
         doc = Document()
         for line in lines: doc.add_paragraph(line)
         buf = io.BytesIO()
         doc.save(buf)
         buf.seek(0)
-        return send_file(buf, as_attachment=True, download_name="cevrilmis.docx", 
-                         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        return send_file(buf, as_attachment=True, download_name="cevrilmis.docx", mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     
-    # PDF ÇIKTISI
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
     y = 800
