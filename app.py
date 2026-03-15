@@ -70,7 +70,7 @@ HTML_UI = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UDFTOPDF | Ücretsiz Çevirici</title>
+    <title>UDFTOPDF | Profesyonel Çevirici</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .box { background: #1e293b; padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 600px; border: 1px solid #334155; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -130,6 +130,24 @@ HTML_UI = """
             🤝 <b>İşbirliği:</b> <a href="mailto:mertfatih1975@gmail.com" class="contact-link">mertfatih1975@gmail.com</a> | 
             <a href="tel:+905327641661" class="contact-link">0532 764 16 61</a>
         </div>
+    </div>
+
+    <div class="info-panel">
+        <h2>🔄 Nasıl Çalışır?</h2>
+        <ol>
+            <li><b>Dosyayı Seçin:</b> Cihazınızdaki .udf veya diğer formatlardaki dosyayı yükleyin.</li>
+            <li><b>Önizleme Yapın:</b> İsterseniz indirmeden önce içeriğe göz atın.</li>
+            <li><b>Formatı Seçin:</b> İhtiyacınıza uygun dönüştürme butonuna tıklayın.</li>
+            <li><b>Güvenle İndirin:</b> Dosyanız işlenir ve anında silinir.</li>
+        </ol>
+
+        <hr style="border: 0; border-top: 1px solid #1e293b; margin: 20px 0;">
+
+        <h2>📖 İndeks Rehberi (Teknik Detay)</h2>
+        <p>📍 <b>İndeks 0 (Taze):</b> Belgenizdeki en güncel veri bloğudur.</p>
+        <p>📍 <b>İndeks 1 (VIP):</b> Dönüştürme işleminin en kararlı olduğu ana içerik bölgesidir.</p>
+        <p>📍 <b>İndeks 2 (Eski):</b> Belgenin imza ve alt veri bilgilerini içeren kısımdır.</p>
+        <p>🚀 <b>Not:</b> Sistemimiz tüm indeksleri tarayarak en temiz metni PDF/Word haline getirir.</p>
     </div>
 
     <div class="info-panel">
@@ -196,7 +214,6 @@ def index():
 
     increment_sayac()
     
-    # TERSİNE ÇEVİRME MANTIĞI (PDF/WORD/TXT -> UDF)
     if mod and "to_udf" in mod:
         text_content = ""
         try:
@@ -222,9 +239,6 @@ def index():
             return send_file(buf, as_attachment=True, download_name="cevrilmis.udf", mimetype="application/zip")
         except Exception as e: return Response(f"Hata: {str(e)}")
 
-    # UDF -> DİĞER FORMATLAR
-    if mod == "jpeg": return Response("JPEG Çevirici Yükleniyor...", mimetype="text/plain")
-    
     lines = guclu_parser(f.read())
     text = "\n".join(lines)
     
