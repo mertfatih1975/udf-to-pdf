@@ -88,13 +88,14 @@ HTML_UI = """
         .preview-btn-ui { background: #10b981; grid-column: span 2; margin-bottom: 10px; }
         .info-panel { width: 100%; max-width: 600px; background: #111827; padding: 25px; border-radius: 20px; border: 1px solid #334155; margin-bottom: 20px; font-size: 14px; line-height: 1.6; color: #94a3b8; text-align: left; }
         .info-panel h2 { color: #38bdf8; font-size: 18px; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
+        .info-panel b { color: #f8fafc; }
         #preview-box { display: none; background: #020617; border: 1px solid #38bdf8; padding: 15px; border-radius: 10px; margin-top: 20px; max-height: 200px; overflow-y: auto; color: #cbd5e1; font-family: monospace; font-size: 12px; white-space: pre-wrap; }
         .review-box { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid #38bdf8; }
         .review-text { font-style: italic; color: #cbd5e1; }
         .review-author { color: #f8fafc; font-weight: bold; font-size: 12px; margin-top: 5px; text-align: right; }
         .contact-link { color: #38bdf8; text-decoration: none; font-weight: bold; }
         .review-btn { background: #38bdf8; color: #0f172a; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 11px; float: right; font-weight: bold; }
-        .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 15px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; text-align: center; }
+        .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 15px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; text-align: left; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -103,7 +104,7 @@ HTML_UI = """
         <div class="stats-badge">🚀 Toplam {{ current_sayac }} güvenli işlem tamamlandı.</div>
         
         <div class="security-badge">
-            🔒 <b>Gizlilik Garantisi:</b> Belgeleriniz sunucularımızda saklanmaz, dönüştürme sonrası anında imha edilir.
+            🛡️ <b>Veri Güvenliği Protokolü:</b> Yüklediğiniz belgeler sunucu disklerine asla kaydedilmez. Tüm işlemler şifrelenmiş geçici bellek (RAM) üzerinde gerçekleştirilir ve oturum sonlandırıldığı an verileriniz geri döndürülemez şekilde sistemden temizlenir.
         </div>
 
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
@@ -114,7 +115,7 @@ HTML_UI = """
 
             <button type="button" id="btnPreview" class="preview-btn-ui" onclick="getPreview()">🔍 BELGE ÖNİZLE</button>
 
-            <span class="section-title t-down">⬇️ UDF'den Çevir (İndir)</span>
+            <span class="section-title t-down">⬇️ UDF'den Çevir</span>
             <div class="btn-group">
                 <button type="submit" name="mod" value="pdf" id="b1" class="pdf">UDF ➔ PDF</button>
                 <button type="submit" name="mod" value="word" id="b2" class="word">UDF ➔ WORD</button>
@@ -122,7 +123,7 @@ HTML_UI = """
                 <button type="submit" name="mod" value="jpeg" id="b4" class="jpeg">UDF ➔ JPEG</button>
             </div>
 
-            <span class="section-title t-up">⬆️ UDF'ye Dönüştür (Oluştur)</span>
+            <span class="section-title t-up">⬆️ UDF'ye Dönüştür (Tersine)</span>
             <div class="btn-group">
                 <button type="submit" name="mod" value="pdf_to_udf" id="b5" class="pdf-u">PDF ➔ UDF</button>
                 <button type="submit" name="mod" value="word_to_udf" id="b6" class="word-u">WORD ➔ UDF</button>
@@ -144,17 +145,22 @@ HTML_UI = """
     <div class="info-panel">
         <h2>🔄 UDF Dönüştürme Nasıl Yapılır?</h2>
         <ol>
-            <li><b>Belgeyi Seçin:</b> Cihazınızdaki .udf veya PDF/Word dosyasını yukarıdaki alana yükleyin.</li>
-            <li><b>Hızlı Önizleme:</b> Dosyayı indirmeden içeriğini görmek için "Belge Önizle" butonuna basın.</li>
-            <li><b>Formatı Belirleyin:</b> İhtiyacınıza uygun çeviri butonuna (PDF, Word, TXT) tıklayın.</li>
+            <li><b>Belgeyi Seçin:</b> Cihazınızdaki .udf veya PDF/Word dosyasını yükleyin.</li>
+            <li><b>Hızlı Önizleme:</b> İndirmeden önce içeriğe göz atmak için "Belge Önizle" butonunu kullanın.</li>
+            <li><b>Formatı Belirleyin:</b> İhtiyacınıza uygun çeviri butonuna tıklayın.</li>
             <li><b>Anında İndirin:</b> İşlem saniyeler içinde tamamlanır ve belgeniz hazır olur.</li>
         </ol>
     </div>
 
     <div class="info-panel">
         <h2>⚖️ UDF Nedir? (UYAP Doküman Formatı)</h2>
-        <p><b>UDF dosyası</b>, Adalet Bakanlığı Ulusal Yargı Ağı Bilişim Sistemi (UYAP) tarafından kullanılan resmi belge formatıdır. Dava dilekçeleri ve mahkeme kararları bu uzantı ile kaydedilir.</p>
+        <p><b>UDF dosyası</b>, Adalet Bakanlığı Ulusal Yargı Ağı Bilişim Sistemi (UYAP) tarafından kullanılan resmi belge formatıdır. Hukuki yazışmalar, dava dilekçeleri ve mahkeme kararları bu uzantı ile kaydedilir.</p>
         <p><b>UDF dosyası nasıl açılır?</b> Standart programlar bu dosyayı açamaz. Bu çevirici ile UDF dosyalarınızı her cihazda açılabilen <b>PDF</b> formatına veya düzenlenebilir <b>Word</b> formatına ücretsiz dönüştürebilirsiniz.</p>
+    </div>
+
+    <div class="info-panel">
+        <h2>🛡️ Güvenli ve Hızlı Çeviri</h2>
+        <p>Sistemimiz, belgelerinizin gizliliğini en üst düzeyde tutar. Dönüştürme işlemi geçici bellek üzerinden yapılır ve hiçbir veri sunucularımızda depolanmaz. Avukatlar, katipler ve vatandaşlar için en hızlı UYAP araçlarını sunuyoruz.</p>
     </div>
 
     <div class="info-panel">
@@ -162,8 +168,8 @@ HTML_UI = """
         <div class="review-box"><div class="review-text">"Duruşma öncesi telefondan anında PDF'e çeviriyorum. Harika."</div><div class="review-author">- Av. M.T.</div></div>
         <div class="review-box"><div class="review-text">"Sistemin kayıt istememesi ve dosyaları silmesi güven veriyor."</div><div class="review-author">- A.Y.</div></div>
         <div class="review-box"><div class="review-text">"UDF dosyalarını Word formatına çevirmek için harika bir araç."</div><div class="review-author">- K.S.</div></div>
-        <div class="review-box"><div class="review-text">"Baro kartla giriş yapamadığım anlarda hayat kurtarıyor."</div><div class="review-author">- Av. S.G.</div></div>
         <div class="review-box"><div class="review-text">"İcra katipliği yapıyorum, her gün onlarca UDF çeviriyorum."</div><div class="review-author">- M.B. (Katip)</div></div>
+        <div class="review-box"><div class="review-text">"Baro kartla giriş yapamadığım anlarda hayat kurtarıyor."</div><div class="review-author">- Av. S.G.</div></div>
         <div class="review-box"><div class="review-text">"Word'e çevirirken yazıların kaymaması çok başarılı."</div><div class="review-author">- Av. E.O.</div></div>
         <div class="review-box"><div class="review-text">"Kişisel verilerin hemen silinmesi beni ikna eden en büyük özellik."</div><div class="review-author">- D.M.</div></div>
     </div>
@@ -186,11 +192,11 @@ HTML_UI = """
             const fd = new FormData(); fd.append('file', fIn.files[0]); fd.append('mod', 'preview');
             const pB = document.getElementById('preview-box');
             const pC = document.getElementById('preview-content');
-            pC.innerText = "Dosya okunuyor..."; pB.style.display = "block";
+            pC.innerText = "Okunuyor..."; pB.style.display = "block";
             try {
                 const r = await fetch('/', { method: 'POST', body: fd });
                 const t = await r.text(); pC.innerText = t;
-            } catch (e) { pC.innerText = "Önizleme oluşturulamadı."; }
+            } catch (e) { pC.innerText = "Hata!"; }
         }
     </script>
 </body>
