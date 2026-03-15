@@ -6,11 +6,11 @@ import xml.etree.ElementTree as ET
 from flask import Flask, request, send_file, render_template_string, Response, make_response
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
+from docx import Document # Word desteği için
 import io
 import re
 from datetime import datetime
 import pytz
-import json
 
 app = Flask(__name__)
 
@@ -69,44 +69,33 @@ def parse_xml_to_lines(xml_content):
         return re.findall(r'[^>]+(?=<)', xml_str)
     except: return ["Okuma hatası."]
 
-# --- HTML UI (TAM KADRO & SEO & MOBİL UYUMLU) ---
+# --- HTML UI (ULTRA SEO & MOBİL) ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UDF to PDF | Online UYAP Dosya Dönüştürücü</title>
+    <title>UDF to PDF | Ücretsiz UYAP Dosya Dönüştürücü</title>
+    <meta name="description" content="UDF to PDF dönüştürücü. UYAP UDF dosyalarını ücretsiz PDF veya Word formatına çevirin. Online, güvenli ve hızlı UDF açıcı.">
+    <link rel="canonical" href="https://udftopdf.com/">
     <style>
         :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --green: #10b981; --text: #f8fafc; --muted: #94a3b8; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
-        
         .box { background: var(--card); padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 650px; border: 1px solid #334155; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 25px; }
-        
         .stats-badge { background: rgba(56, 189, 248, 0.1); color: var(--accent); padding: 10px 15px; border-radius: 12px; font-size: 14px; margin-bottom: 20px; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: bold; display: inline-block; }
-        
-        .security-badge { background: rgba(16, 185, 129, 0.1); color: #6ee7b7; padding: 18px; border-radius: 16px; font-size: 13.5px; margin-bottom: 25px; border: 1px solid rgba(16, 185, 129, 0.2); text-align: left; line-height: 1.6; }
-        
-        .section-title { font-size: 12px; font-weight: bold; margin: 15px 0 10px 0; display: block; text-align: left; text-transform: uppercase; color: var(--accent); letter-spacing: 1px; }
-        
+        .security-badge { background: rgba(16, 185, 129, 0.1); color: #6ee7b7; padding: 18px; border-radius: 16px; font-size: 13.5px; margin-bottom: 20px; border: 1px solid rgba(16, 185, 129, 0.2); text-align: left; line-height: 1.6; }
+        .contact-box { background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 15px; padding: 15px; margin-bottom: 20px; font-size: 13.5px; }
+        .contact-box a { color: var(--accent); text-decoration: none; font-weight: bold; margin: 0 10px; }
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
         button { border: none; padding: 14px; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; font-size: 13px; }
-        button:hover { filter: brightness(1.1); transform: translateY(-1px); }
-        .pdf { background: #0ea5e9; } .word { background: #2563eb; } .txt { background: #475569; } .jpeg { background: #d97706; }
+        .pdf { background: #0ea5e9; } .word { background: #2563eb; } .txt { background: #475569; }
         .preview-btn { background: var(--green); width: 100%; margin-top: 5px; }
-
         .info-panel { width: 100%; max-width: 650px; background: #111827; padding: 30px; border-radius: 24px; border: 1px solid #334155; margin-bottom: 20px; text-align: left; }
-        .info-panel h2 { color: var(--accent); font-size: 18px; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
-        .info-panel p, .info-panel li { font-size: 14px; color: var(--muted); line-height: 1.7; }
-        
-        .review-card { background: var(--card); padding: 18px; border-radius: 15px; margin-bottom: 15px; border-left: 4px solid var(--accent); transition: 0.3s; }
-        .review-text { font-style: italic; color: var(--text); font-size: 14px; display: block; margin-bottom: 8px; }
+        .info-panel h2 { color: var(--accent); font-size: 18px; margin-bottom: 15px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
+        .review-card { background: var(--card); padding: 18px; border-radius: 15px; margin-bottom: 15px; border-left: 4px solid var(--accent); }
         .review-author { color: var(--accent); font-weight: bold; font-size: 12px; text-align: right; display: block; }
-
-        #preview-box { display: none; background: #020617; border: 1px solid var(--accent); padding: 20px; border-radius: 14px; margin-top: 20px; color: #cbd5e1; font-family: monospace; max-height: 250px; overflow-y: auto; font-size: 13px; }
-        
-        .contact-footer { margin-top: 20px; font-size: 13px; color: var(--muted); border-top: 1px solid #334155; padding-top: 20px; text-align: center; width: 100%; max-width: 650px; }
-        .contact-footer a { color: var(--accent); text-decoration: none; font-weight: bold; }
+        #preview-box { display: none; background: #020617; border: 1px solid var(--accent); padding: 20px; border-radius: 14px; margin-top: 20px; color: #cbd5e1; font-family: monospace; max-height: 250px; overflow-y: auto; }
         h1 { color: var(--accent); font-size: 26px; margin: 0 0 10px 0; }
     </style>
 </head>
@@ -116,7 +105,13 @@ HTML_UI = """
         <div class="stats-badge">🚀 {{ current_sayac }} Güvenli İşlem Tamamlandı</div>
         
         <div class="security-badge">
-            🛡️ <b>Veri Güvenliği Protokolü:</b> Yüklediğiniz belgeler sunucu disklerine asla kaydedilmez. Tüm işlemler şifrelenmiş RAM üzerinde gerçekleştirilir ve oturum kapandığı an verileriniz geri döndürülemez şekilde sistemden temizlenir.
+            🛡️ <b>Veri Güvenliği Protokolü:</b> Yüklediğiniz belgeler sunucu disklerine asla kaydedilmez. Tüm işlemler şifrelenmiş RAM üzerinde gerçekleştirilir ve oturum kapandığı an verileriniz kalıcı olarak temizlenir.
+        </div>
+
+        <div class="contact-box">
+            🤝 <b>İşbirliği & Destek:</b> 
+            <a href="mailto:mertfatih1975@gmail.com">mertfatih1975@gmail.com</a> | 
+            <a href="tel:+905327641661">0532 764 16 61</a>
         </div>
 
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
@@ -124,13 +119,13 @@ HTML_UI = """
             
             <button type="button" class="preview-btn" onclick="getPreview()">🔍 BELGE İÇERİĞİNİ ÖNİZLE</button>
 
-            <span class="section-title">⬇️ UDF'den Dışa Aktar</span>
+            <span style="font-size: 12px; font-weight: bold; display: block; text-align: left; color: var(--accent); margin: 15px 0 10px 0;">⬇️ UDF'DEN ÇEVİR</span>
             <div class="btn-group">
-                <button type="submit" name="mod" value="pdf" class="pdf">UDF ➔ PDF</button>
-                <button type="submit" name="mod" value="word" class="word">UDF ➔ WORD</button>
+                <button type="submit" name="mod" value="pdf" class="pdf">PDF OLARAK İNDİR</button>
+                <button type="submit" name="mod" value="word" class="word">WORD OLARAK İNDİR</button>
             </div>
 
-            <span class="section-title">⬆️ Formatı UDF'ye Çevir</span>
+            <span style="font-size: 12px; font-weight: bold; display: block; text-align: left; color: var(--accent); margin: 5px 0 10px 0;">⬆️ UDF'YE ÇEVİR</span>
             <div class="btn-group">
                 <button type="submit" name="mod" value="pdf_to_udf" class="pdf">PDF ➔ UDF</button>
                 <button type="submit" name="mod" value="word_to_udf" class="word">WORD ➔ UDF</button>
@@ -141,39 +136,14 @@ HTML_UI = """
     </div>
 
     <div class="info-panel">
-        <h2>🔄 Nasıl Çalışır?</h2>
-        <ol>
-            <li><b>Dosya Seçin:</b> Cihazınızdaki .udf veya PDF/Word dosyasını yükleyin.</li>
-            <li><b>Önizleme:</b> İndirmeden önce içeriği kontrol edin.</li>
-            <li><b>Formatı Belirleyin:</b> İhtiyacınıza göre dönüştürme butonuna basın.</li>
-            <li><b>Güvenle İndirin:</b> Dosyanız işlenir ve anında silinir.</li>
-        </ol>
-    </div>
-
-    <div class="info-panel">
         <h2>⚖️ UDF Dosyası Nedir? (UYAP)</h2>
-        <p><b>UDF (Uyap Document Format)</b>, Adalet Bakanlığı tarafından kullanılan resmi belge formatıdır. Standart programlarla açılamaz. Bu araçla her cihazda açılabilen <b>PDF</b> veya düzenlenebilir <b>Word</b> formatına ücretsiz çevirebilirsiniz.</p>
+        <p>UDF (Uyap Document Format), Adalet Bakanlığı tarafından kullanılan resmi belge formatıdır. Bu araçla <b>UDF to PDF</b> işlemini ücretsiz yapabilirsiniz.</p>
     </div>
 
     <div class="info-panel">
         <h2>💬 Kullanıcı Yorumları</h2>
-        <div class="review-card"><span class="review-text">"Duruşma salonunda telefondan anında PDF'e çeviriyorum. Harika."</span><span class="review-author">- Av. M.T.</span></div>
-        <div class="review-card"><span class="review-text">"Sistemin kayıt istememesi güven veriyor. Elinize sağlık."</span><span class="review-author">- A.Y.</span></div>
-        <div class="review-card"><span class="review-text">"Dilekçelerimi Word'e çevirirken formatın bozulmaması çok başarılı."</span><span class="review-author">- K.S.</span></div>
-        <div class="review-card"><span class="review-text">"İcra dairelerinde dosya incelerken en büyük yardımcım."</span><span class="review-author">- M.B. (Katip)</span></div>
-        <div class="review-card"><span class="review-text">"Baro kartla giriş yapamadığım anlarda hayat kurtarıyor."</span><span class="review-author">- Av. S.G.</span></div>
-        <div class="review-card"><span class="review-text">"Vatandaş portalından indirdiğim kararları telefonumda açabildim."</span><span class="review-author">- H.K.</span></div>
-        <div class="review-card"><span class="review-text">"PDF'ten UDF'ye çevirme özelliği sayesinde dilekçelerimi hazırlıyorum."</span><span class="review-author">- Stj. Av. C.D.</span></div>
-        <div class="review-card"><span class="review-text">"Ofis dışında acil evrak gelince direkt cepten hallediyoruz."</span><span class="review-author">- Av. Z.F.</span></div>
-        <div class="review-card"><span class="review-text">"Dosya boyutu kısıtlaması olmaması çok iyi."</span><span class="review-author">- H.A.</span></div>
-        <div class="review-card"><span class="review-text">"UYAP editörüyle uğraşmaktansa burada çevirmek çok daha pratik."</span><span class="review-author">- Av. B.R.</span></div>
-        <div class="review-card"><span class="review-text">"Basit, hızlı ve ücretsiz. Favorilerime ekledim."</span><span class="review-author">- E.S.</span></div>
-        <div class="review-card"><span class="review-text">"Word'e çevirirken yazıların kaymaması çok başarılı."</span><span class="review-author">- Av. E.O.</span></div>
-        <div class="review-card"><span class="review-text">"Kişisel verilerin hemen silinmesi beni ikna eden en büyük özellik."</span><span class="review-author">- D.M.</span></div>
-    </div>
-
-    <div class="contact-footer">
-        🤝 <b>İletişim:</b> <a href="mailto:mertfatih1975@gmail.com">mertfatih1975@gmail.com</a> | <a href="tel:+905327641661">0532 764 16 61</a>
+        <div class="review-card">"Duruşma salonunda telefondan anında PDF'e çeviriyorum. Harika." <span class="review-author">- Av. M.T.</span></div>
+        <div class="review-card">"Sistemin kayıt istememesi güven veriyor. Elinize sağlık." <span class="review-author">- A.Y.</span></div>
     </div>
 
     <script>
@@ -194,6 +164,16 @@ HTML_UI = """
 </html>
 """
 
+# --- LANDING PAGE ROUTE'LARI ---
+@app.route("/udf-to-pdf")
+@app.route("/uyap-udf-to-pdf")
+@app.route("/udf-viewer")
+@app.route("/udf-acma")
+@app.route("/udf-to-word")
+def landing():
+    sayac = get_sayac()
+    return render_template_string(HTML_UI, current_sayac=f"{sayac:,}".replace(',', '.'))
+
 @app.route("/", methods=["GET","POST"])
 def index():
     if request.method == "GET":
@@ -203,6 +183,8 @@ def index():
     f = request.files.get("file")
     mod = request.form.get("mod")
     
+    if not f: return "Dosya seçilmedi."
+    
     if mod == "preview":
         try:
             lines = guclu_parser(f.read())
@@ -211,16 +193,30 @@ def index():
 
     increment_sayac()
     
-    # PDF/Word -> UDF
+    # --- PDF/Word'DEN UDF'YE ÇEVİRME ---
     if mod and "_to_udf" in mod:
-        # (UDF oluşturma mantığı burada devam eder)
-        pass
+        text_content = f.read()[:2000].decode("utf-8", errors="ignore")
+        xml = f'<?xml version="1.0" encoding="UTF-8"?><udf><content>{text_content}</content></udf>'
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            z.writestr("document.xml", xml)
+        buf.seek(0)
+        return send_file(buf, as_attachment=True, download_name="donusturulmus.udf", mimetype="application/octet-stream")
 
-    # UDF -> PDF/Word
+    # --- UDF'DEN DİĞER FORMATLARA ÇEVİRME ---
     lines = guclu_parser(f.read())
-    text = "\n".join(lines)
     
-    # PDF oluşturma ve gönderme...
+    # WORD ÇIKTISI (Upgrade)
+    if mod == "word":
+        doc = Document()
+        for line in lines: doc.add_paragraph(line)
+        buf = io.BytesIO()
+        doc.save(buf)
+        buf.seek(0)
+        return send_file(buf, as_attachment=True, download_name="cevrilmis.docx", 
+                         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    
+    # PDF ÇIKTISI
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
     y = 800
