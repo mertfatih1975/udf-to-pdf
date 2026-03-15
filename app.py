@@ -34,7 +34,7 @@ def increment_sayac():
         pass
     return count
 
-# --- PROGRAMATİK SEO ÜRETİCİSİ (SENİN KODUN) ---
+# --- PROGRAMATİK SEO ÜRETİCİSİ ---
 SEO_KEYWORDS = [
     "udf to pdf", "udf dosyası açma", "uyap udf converter", "udf to word", 
     "udf to txt", "udf to jpg", "udf converter", "uyap belge açma", 
@@ -45,11 +45,9 @@ SEO_KEYWORDS = [
 
 def generate_seo_pages():
     pages = {}
-    # Linklerin sorunsuz çalışması için Türkçe karakter düzeltici
     tr_map = {"ç": "c", "ğ": "g", "ı": "i", "ö": "o", "ş": "s", "ü": "u"}
     
     for kw in SEO_KEYWORDS:
-        # Link oluşturma (Slug)
         slug = kw.lower()
         for tr, eng in tr_map.items():
             slug = slug.replace(tr, eng)
@@ -79,7 +77,6 @@ def generate_seo_pages():
         }
     return pages
 
-# SEO sayfalarını uygulama başlarken bir kere üretiyoruz:
 SEO_GENERATED = generate_seo_pages()
 
 # --- UDF PARSER ---
@@ -113,12 +110,11 @@ def parse_xml_to_lines(xml_content):
         return lines if lines else [re.sub(r'<[^>]+>', ' ', xml_str).strip()]
     except: return [re.sub(r'<[^>]+>', ' ', xml_content.decode("utf-8", errors="ignore")).strip()]
 
-# --- GOOGLE DOĞRULAMA (DOSYA YÖNTEMİ) ---
+# --- SEO YOLLARI ---
 @app.route("/googleaNpaoi0xHA1z8efKdzI2QOY1UkRhJpx7MURlOgyd9uE.html")
 def google_verify_file():
     return "google-site-verification: googleaNpaoi0xHA1z8efKdzI2QOY1UkRhJpx7MURlOgyd9uE.html"
 
-# --- SEO: SITEMAP & ROBOTS.TXT ---
 @app.route("/robots.txt")
 def robots():
     host = request.host_url.rstrip('/')
@@ -129,12 +125,11 @@ def robots():
 def sitemap():
     host = request.host_url.rstrip('/')
     urls = f"<url><loc>{host}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>"
-    # Otomatik üretilen sayfaları site haritasına ekliyoruz
     for slug in SEO_GENERATED.keys(): 
         urls += f"<url><loc>{host}/{slug}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>"
     return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', mimetype="text/xml")
 
-# --- MOBİL UYGULAMA (PWA) ---
+# --- PWA ---
 @app.route("/manifest.json")
 def manifest():
     data = {
@@ -144,7 +139,6 @@ def manifest():
         "display": "standalone",
         "background_color": "#0f172a",
         "theme_color": "#0f172a",
-        "description": "UYAP UDF dosyalarınızı kolayca dönüştürün.",
         "icons": [{"src": "/icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable"}]
     }
     return Response(json.dumps(data), mimetype="application/json")
@@ -221,9 +215,6 @@ HTML_UI = """
         @media (max-width: 600px) { .mobile-install-badge { display: block; } }
 
         .stats-badge { background: rgba(56, 189, 248, 0.1); color: #38bdf8; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: bold; margin-bottom: 25px; border: 1px solid rgba(56, 189, 248, 0.3); }
-        .trust-points { text-align: left; margin-bottom: 25px; font-size: 14px; color: #94a3b8; display: grid; gap: 10px; }
-        .trust-points span { display: flex; align-items: center; gap: 8px; }
-        .trust-points b { color: #f8fafc; }
         .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 15px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; text-align: left; line-height: 1.5; }
         
         .section-title { font-size: 14px; font-weight: bold; margin-bottom: 10px; margin-top: 15px; display: block; }
@@ -234,15 +225,8 @@ HTML_UI = """
         button { border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; opacity: 0.3; pointer-events: none; width: 100%; font-size: 14px; }
         button.active { opacity: 1; pointer-events: auto; }
         
-        .pdf { background: #0ea5e9; }
-        .word { background: #2b579a; } 
-        .txt { background: #64748b; }
-        .jpeg { background: #f59e0b; }
-        
-        .pdf-udf { background: #0284c7; }
-        .word-udf { background: #1e3a8a; }
-        .txt-udf { background: #475569; }
-        .jpeg-udf { background: #d97706; }
+        .pdf { background: #0ea5e9; } .word { background: #2b579a; } .txt { background: #64748b; } .jpeg { background: #f59e0b; }
+        .pdf-udf { background: #0284c7; } .word-udf { background: #1e3a8a; } .txt-udf { background: #475569; } .jpeg-udf { background: #d97706; }
 
         input[type="file"] { margin-bottom: 10px; color: #94a3b8; width: 100%; border: 1px dashed #475569; padding: 15px; border-radius: 10px; cursor: pointer; box-sizing: border-box; }
         
@@ -251,7 +235,6 @@ HTML_UI = """
         .info-panel h3 { color: #e2e8f0; font-size: 16px; margin-top: 20px; margin-bottom: 10px; }
         .info-panel b { color: #f8fafc; }
         .info-panel ul, .info-panel ol { padding-left: 20px; margin-bottom: 20px; }
-        .info-panel li { margin-bottom: 8px; }
         
         .review-btn { background: #38bdf8; color: #0f172a; padding: 5px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; font-weight: bold; transition: 0.2s; }
         .review-btn:hover { background: #0ea5e9; color: white; }
@@ -263,12 +246,11 @@ HTML_UI = """
 
         .footer { margin-top: 10px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
         .contact-area { margin-top: 25px; padding: 15px; border-top: 1px solid #334155; color: #94a3b8; font-size: 13px; }
-        .contact-area b { color: #38bdf8; }
+        .contact-link { color: #38bdf8; text-decoration: none; font-weight: bold; }
+        .contact-link:hover { text-decoration: underline; }
         h1 { color:#38bdf8; font-size: 20px; line-height: 1.4; margin-bottom: 15px; }
 
-        @media (min-width: 600px) {
-            h1 { font-size: 24px; }
-        }
+        @media (min-width: 600px) { h1 { font-size: 24px; } }
     </style>
 </head>
 <body>
@@ -308,7 +290,8 @@ HTML_UI = """
         
         <div class="contact-area">
             🤝 <b>Reklam ve İşbirliği:</b><br>
-            mertfatih1975@gmail.com | 0532 764 16 61
+            <a href="mailto:mertfatih1975@gmail.com?subject=UDFTOPDF İşbirliği Talebi" class="contact-link">mertfatih1975@gmail.com</a> | 
+            <a href="tel:+905327641661" class="contact-link">0532 764 16 61</a>
         </div>
     </div>
 
@@ -328,14 +311,13 @@ HTML_UI = """
         
         <h2>🔄 Nasıl Çalışır?</h2>
         <ol>
-            <li><b>Dosyayı yükleyin:</b> Dönüştürmek istediğiniz dosyayı (UDF, PDF, Word vb.) seçin.</li>
-            <li><b>Butona tıklayın:</b> İhtiyacınıza uygun olan menüden doğru çeviri butonuna basın.</li>
-            <li><b>Dönüştür ve indirin:</b> İşlemi başlatın ve saniyeler içinde belgenizi alın.</li>
+            <li><b>Dosyayı yükleyin:</b> Dönüştürmek istediğiniz dosyayı seçin.</li>
+            <li><b>Butona tıklayın:</b> İhtiyacınıza uygun olan çeviri butonuna basın.</li>
+            <li><b>Dönüştür ve indirin:</b> Saniyeler içinde belgenizi alın.</li>
         </ol>
 
         <h2>⚖️ UDF Nedir? UYAP Doküman Formatı</h2>
-        <p><b>UDF dosyası (UYAP Doküman Formatı)</b>, Türkiye'de mahkemeler ve avukatlar tarafından UYAP (Ulusal Yargı Ağı Bilişim Sistemi) üzerinden oluşturulan belge formatıdır. Dava dilekçeleri, mahkeme kararları ve resmi hukuki yazışmalar <b>.udf uzantılı</b> dosyalar olarak kaydedilmektedir.</p>
-        <p><b>UDF dosyası nasıl açılır?</b> sorusu avukatlar ve vatandaşlar tarafından sıkça sorulmaktadır. Standart belgelerden farklı olduğundan Adobe Reader veya Microsoft Word ile doğrudan açılamaz. Bu <b>UDF çevirici</b> araç, UDF dosyalarınızı PDF formatına dönüştürerek erişilebilir hale getirir.</p>
+        <p><b>UDF dosyası (UYAP Doküman Formatı)</b>, Türkiye'de mahkemeler ve avukatlar tarafından kullanılan belge formatıdır. Bu <b>UDF çevirici</b> araç, dosyalarınızı her cihazda açılabilir PDF formatına dönüştürür.</p>
     </div>
 
     <div class="info-panel">
@@ -346,20 +328,14 @@ HTML_UI = """
         
         <div class="review-box">
             <div class="stars">⭐⭐⭐⭐⭐</div>
-            <div class="review-text">"Duruşma öncesi UYAP'tan indirdiğim tüm dosyaları telefondan anında PDF'e çeviriyorum. İnanılmaz hızlı ve program kurmaya gerek kalmıyor."</div>
+            <div class="review-text">"Duruşma öncesi UYAP'tan indirdiğim tüm dosyaları telefondan anında PDF'e çeviriyorum. Harika bir araç."</div>
             <div class="review-author">- Av. Mehmet T.</div>
         </div>
 
         <div class="review-box">
             <div class="stars">⭐⭐⭐⭐⭐</div>
-            <div class="review-text">"Sistemin kayıt istememesi ve dosyaları anında silmesi güvenlik açısından çok iyi. Telefondan kullanmak çok pratik."</div>
+            <div class="review-text">"Sistemin kayıt istememesi ve dosyaları anında silmesi güvenlik açısından çok iyi."</div>
             <div class="review-author">- Ayşe Y.</div>
-        </div>
-
-        <div class="review-box">
-            <div class="stars">⭐⭐⭐⭐⭐</div>
-            <div class="review-text">"UDF dosyalarını Word formatına çevirmek için harika bir araç. Yeni eklenen PDF to UDF özelliği çok işime yaradı. Emeği geçenlere çok teşekkür ederim."</div>
-            <div class="review-author">- Kemal S.</div>
         </div>
     </div>
 
@@ -371,9 +347,7 @@ HTML_UI = """
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                    console.log('PWA aktif.');
-                }).catch(function(err) {});
+                navigator.serviceWorker.register('/sw.js').then(function(reg) {}).catch(function(err) {});
             });
         }
         function toggleBtns() {
@@ -400,7 +374,6 @@ def index():
     if request.method == "GET":
         sayac = get_sayac()
         formatted_sayac = f"{sayac:,}".replace(',', '.')
-        
         page_title = "UDFTOPDF | UYAP Dosya Dönüştürücü"
         page_desc = "UDF dosyalarını ücretsiz PDF, Word ve JPEG formatına dönüştürün. UYAP Doküman Formatı çevirici."
         host = request.host_url.rstrip('/')
@@ -421,7 +394,6 @@ def index():
     
     f = request.files.get("file")
     mod = request.form.get("mod")
-    
     increment_sayac()
     
     if mod and "to_udf" in mod:
@@ -432,20 +404,15 @@ def index():
                 reader = PyPDF2.PdfReader(f)
                 for page in reader.pages:
                     extracted = page.extract_text()
-                    if extracted:
-                        text_content += extracted + "\n"
+                    if extracted: text_content += extracted + "\n"
             elif mod == "word_to_udf":
-                filename = f.filename.lower()
-                if filename.endswith(".docx"):
+                if f.filename.lower().endswith(".docx"):
                     import docx
                     doc = docx.Document(f)
                     text_content = "\n".join([para.text for para in doc.paragraphs])
-                else:
-                    return Response("UYARI: Sadece .docx uzantılı güncel Word dosyaları çevrilebilmektedir.", mimetype="text/plain; charset=utf-8")
+                else: return Response("Sadece .docx Word dosyaları desteklenir.", mimetype="text/plain; charset=utf-8")
             elif mod == "txt_to_udf":
                 text_content = f.read().decode("utf-8", errors="ignore")
-            elif mod == "jpeg_to_udf":
-                return Response("BİLGİ: JPEG fotoğraflarından yazıları okuma (OCR) modülü yakında eklenecektir.", mimetype="text/plain; charset=utf-8")
             
             safe_text = text_content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             html_content = f'<html><body><p>{safe_text.replace(chr(10), "<br>")}</p></body></html>'
@@ -455,13 +422,8 @@ def index():
             with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
                 zf.writestr('content.xml', udf_xml.encode('utf-8'))
             buf.seek(0)
-            return send_file(buf, as_attachment=True, download_name="cevrilmis_belge.udf", mimetype="application/zip")
-            
-        except Exception as e:
-            return Response(f"Hata detayı: {str(e)}", mimetype="text/plain; charset=utf-8")
-
-    if mod == "jpeg":
-        return Response("JPEG dönüştürme modülü sunucuya yükleniyor. Lütfen daha sonra tekrar deneyin.", mimetype="text/plain; charset=utf-8")
+            return send_file(buf, as_attachment=True, download_name="cevrilmis.udf", mimetype="application/zip")
+        except Exception as e: return Response(f"Hata: {str(e)}", mimetype="text/plain; charset=utf-8")
 
     lines = guclu_parser(f.read())
     text = "\n".join(lines)
@@ -479,18 +441,15 @@ def index():
     c.save(); buf.seek(0)
     return send_file(buf, as_attachment=True, download_name="belge.pdf", mimetype="application/pdf")
 
-# SENİN YAZDIĞIN ÖZEL SEO YAKALAYICISI:
 @app.route("/<path:path>")
 def catch_all(path):
     if path in SEO_GENERATED:
         page = SEO_GENERATED[path]
-        
         tz = pytz.timezone('Europe/Istanbul')
         now = datetime.now(tz)
         sayac = get_sayac()
         formatted_sayac = f"{sayac:,}".replace(',', '.')
         host = request.host_url.rstrip('/')
-        
         return render_template_string(HTML_UI, 
             current_time=now.strftime("%H:%M"), 
             current_year=now.year, 
@@ -502,7 +461,6 @@ def catch_all(path):
             request=request,
             seo_content=page["content"] 
         )
-        
     return "404 Not Found", 404
 
 if __name__ == "__main__":
