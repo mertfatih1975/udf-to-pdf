@@ -70,7 +70,7 @@ HTML_UI = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UDFTOPDF | Profesyonel Çevirici</title>
+    <title>UDFTOPDF | Profesyonel UYAP Dosya Dönüştürücü</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .box { background: #1e293b; padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 600px; border: 1px solid #334155; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -84,12 +84,15 @@ HTML_UI = """
         .pdf-u { background: #0284c7; } .word-u { background: #1e3a8a; } .txt-u { background: #475569; } .jpeg-u { background: #d97706; }
         .preview-btn-ui { background: #10b981; grid-column: span 2; margin-bottom: 10px; }
         .info-panel { width: 100%; max-width: 600px; background: #111827; padding: 25px; border-radius: 20px; border: 1px solid #334155; margin-bottom: 20px; font-size: 14px; line-height: 1.6; color: #94a3b8; text-align: left; }
+        .info-panel h2 { color: #38bdf8; font-size: 18px; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
+        .info-panel b { color: #f8fafc; }
         #preview-box { display: none; background: #020617; border: 1px solid #38bdf8; padding: 15px; border-radius: 10px; margin-top: 20px; max-height: 200px; overflow-y: auto; color: #cbd5e1; font-family: monospace; font-size: 12px; white-space: pre-wrap; }
         .review-box { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid #38bdf8; }
         .review-text { font-style: italic; color: #cbd5e1; }
         .review-author { color: #f8fafc; font-weight: bold; font-size: 12px; margin-top: 5px; text-align: right; }
         .contact-link { color: #38bdf8; text-decoration: none; font-weight: bold; }
         .review-btn { background: #38bdf8; color: #0f172a; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 11px; float: right; font-weight: bold; }
+        .security-badge { background: rgba(6, 78, 59, 0.4); color: #6ee7b7; padding: 15px; border-radius: 12px; font-size: 13px; margin-bottom: 25px; border: 1px solid #059669; text-align: center; }
     </style>
 </head>
 <body>
@@ -97,6 +100,10 @@ HTML_UI = """
         <h1>UDF Dönüştürücü</h1>
         <div class="stats-badge">🚀 Toplam {{ current_sayac }} güvenli işlem tamamlandı.</div>
         
+        <div class="security-badge">
+            🔒 <b>Güvenlik Notu:</b> Dosyalarınız hiçbir şekilde depolanmaz, işlem biter bitmez sistemden kalıcı olarak silinir.
+        </div>
+
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
             <input type="file" name="file" id="fileInput" required style="width:100%; margin-bottom:15px; color: #94a3b8;">
             <label style="font-size: 12px; display: block; margin-bottom: 15px; cursor: pointer;">
@@ -135,34 +142,34 @@ HTML_UI = """
     <div class="info-panel">
         <h2>🔄 Nasıl Çalışır?</h2>
         <ol>
-            <li><b>Dosyayı Seçin:</b> Cihazınızdaki .udf veya diğer formatlardaki dosyayı yükleyin.</li>
-            <li><b>Önizleme Yapın:</b> İsterseniz indirmeden önce içeriğe göz atın.</li>
-            <li><b>Formatı Seçin:</b> İhtiyacınıza uygun dönüştürme butonuna tıklayın.</li>
-            <li><b>Güvenle İndirin:</b> Dosyanız işlenir ve anında silinir.</li>
+            <li><b>Dosyayı Yükleyin:</b> .udf, .pdf veya .docx formatındaki dosyanızı seçin.</li>
+            <li><b>Önizleme Yapın:</b> İçeriği kontrol etmek için "Dosya Önizle" butonunu kullanın.</li>
+            <li><b>Formatı Belirleyin:</b> İhtiyacınıza göre PDF veya Word butonuna basın.</li>
+            <li><b>İndirin:</b> Saniyeler içinde dönüştürülmüş belgeniz cihazınıza inecektir.</li>
         </ol>
+    </div>
 
-        <hr style="border: 0; border-top: 1px solid #1e293b; margin: 20px 0;">
+    <div class="info-panel">
+        <h2>⚖️ UDF Nedir? UYAP Doküman Formatı</h2>
+        <p><b>UDF dosyası</b>, Türkiye Cumhuriyeti Adalet Bakanlığı Ulusal Yargı Ağı Projesi (UYAP) kapsamında oluşturulan resmi belge formatıdır. Bu dosyalar, mahkeme tutanakları, dava dilekçeleri ve kararlarını saklamak için kullanılır.</p>
+        <p><b>UDF dosyası nasıl açılır?</b> UDF dosyaları standart metin düzenleyicilerle açılmaz. Bu güvenli araç sayesinde belgelerinizi her cihazda okunabilen <b>PDF</b> veya düzenlenebilir <b>Word</b> formatına çevirebilirsiniz.</p>
+    </div>
 
-        <h2>📖 İndeks Rehberi (Teknik Detay)</h2>
-        <p>📍 <b>İndeks 0 (Taze):</b> Belgenizdeki en güncel veri bloğudur.</p>
-        <p>📍 <b>İndeks 1 (VIP):</b> Dönüştürme işleminin en kararlı olduğu ana içerik bölgesidir.</p>
-        <p>📍 <b>İndeks 2 (Eski):</b> Belgenin imza ve alt veri bilgilerini içeren kısımdır.</p>
-        <p>🚀 <b>Not:</b> Sistemimiz tüm indeksleri tarayarak en temiz metni PDF/Word haline getirir.</p>
+    <div class="info-panel">
+        <h2>📖 İndeks Rehberi (Teknik Açıklama)</h2>
+        <p>📍 <b>İndeks 0 (Taze):</b> Dosyanın en yeni ve güncel metin katmanıdır.</p>
+        <p>📍 <b>İndeks 1 (Güçlü):</b> Ana metnin en kararlı halini barındıran VIP bölgedir.</p>
+        <p>📍 <b>İndeks 2 (Eski):</b> Belgenin imza verilerini ve meta bilgilerini içeren bölümdür.</p>
+        <p>🚀 <b>Not:</b> Sistemimiz otomatik olarak en doğru indeksi seçip temiz bir metin üretir.</p>
     </div>
 
     <div class="info-panel">
         <h2><span>💬 Kullanıcı Yorumları</span><a href="mailto:mertfatih1975@gmail.com?subject=Yeni Yorum" class="review-btn">+ Yorum Yap</a></h2>
-        <div class="review-box"><div class="review-text">"Duruşma öncesi telefondan anında PDF'e çeviriyorum."</div><div class="review-author">- Av. M.T.</div></div>
+        <div class="review-box"><div class="review-text">"Duruşma öncesi telefondan anında PDF'e çeviriyorum. Harika."</div><div class="review-author">- Av. M.T.</div></div>
         <div class="review-box"><div class="review-text">"Sistemin kayıt istememesi ve dosyaları silmesi güven veriyor."</div><div class="review-author">- A.Y.</div></div>
-        <div class="review-box"><div class="review-text">"UDF dosyalarını Word formatına çevirmek için harika."</div><div class="review-author">- K.S.</div></div>
-        <div class="review-box"><div class="review-text">"Baro kartla giriş yapamadığım anlarda hayat kurtarıyor."</div><div class="review-author">- Av. S.G.</div></div>
+        <div class="review-box"><div class="review-text">"UDF dosyalarını Word formatına çevirmek için harika bir araç."</div><div class="review-author">- K.S.</div></div>
         <div class="review-box"><div class="review-text">"İcra katipliği yapıyorum, her gün onlarca UDF çeviriyorum."</div><div class="review-author">- M.B. (Katip)</div></div>
-        <div class="review-box"><div class="review-text">"Vatandaş portalından indirdiğim kararları telefonumda açabildim."</div><div class="review-author">- H.K.</div></div>
-        <div class="review-box"><div class="review-text">"PDF'ten UDF'ye çevirme özelliği sayesinde dilekçelerimi hazırlıyorum."</div><div class="review-author">- Stj. Av. C.D.</div></div>
-        <div class="review-box"><div class="review-text">"Ofis dışında acil evrak gelince direkt cepten hallediyoruz."</div><div class="review-author">- Av. Z.F.</div></div>
-        <div class="review-box"><div class="review-text">"Dosya boyutu kısıtlaması olmaması çok iyi."</div><div class="review-author">- H.A.</div></div>
-        <div class="review-box"><div class="review-text">"UYAP editörüyle uğraşmaktansa burada çevirmek çok daha pratik."</div><div class="review-author">- Av. B.R.</div></div>
-        <div class="review-box"><div class="review-text">"Basit, hızlı ve ücretsiz. Favorilerime ekledim."</div><div class="review-author">- E.S.</div></div>
+        <div class="review-box"><div class="review-text">"Baro kartla giriş yapamadığım anlarda hayat kurtarıyor."</div><div class="review-author">- Av. S.G.</div></div>
         <div class="review-box"><div class="review-text">"Word'e çevirirken yazıların kaymaması çok başarılı."</div><div class="review-author">- Av. E.O.</div></div>
         <div class="review-box"><div class="review-text">"Kişisel verilerin hemen silinmesi beni ikna eden en büyük özellik."</div><div class="review-author">- D.M.</div></div>
     </div>
@@ -227,8 +234,6 @@ def index():
                 text_content = "\n".join([p.text for p in doc.paragraphs])
             elif mod == "txt_to_udf":
                 text_content = f.read().decode("utf-8", errors="ignore")
-            elif mod == "jpeg_to_udf":
-                return Response("OCR Modülü Yakında!", mimetype="text/plain")
 
             safe_text = text_content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             html_c = f'<html><body><p>{safe_text.replace(chr(10), "<br>")}</p></body></html>'
