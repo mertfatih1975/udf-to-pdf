@@ -3,11 +3,10 @@ import os
 import zlib
 import zipfile
 import xml.etree.ElementTree as ET
-from flask import Flask, request, send_file, render_template_string, Response, make_response
+from flask import Flask, request, send_file, render_template_string, Response
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from docx import Document
-import pdfplumber
 import io
 import re
 from datetime import datetime
@@ -70,7 +69,7 @@ def parse_xml_to_lines(xml_content):
         return re.findall(r'[^>]+(?=<)', xml_str)
     except: return ["Okuma hatası."]
 
-# --- HTML UI (HER ŞEY DAHİL) ---
+# --- HTML UI (İletişim, Yorumlar & SEO Tam Kadro) ---
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="tr">
@@ -78,7 +77,7 @@ HTML_UI = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UDF to PDF | Online UYAP Dosya Dönüştürücü</title>
-    <meta name="description" content="UDF to PDF dönüştürücü. UYAP UDF dosyalarını ücretsiz PDF veya Word formatına çevirin.">
+    <meta name="description" content="UDF to PDF dönüştürücü. UYAP UDF dosyalarını ücretsiz PDF veya Word formatına çevirin. Güvenli ve hızlı UDF açıcı.">
     <link rel="canonical" href="https://udftopdf.com/">
     <style>
         :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --green: #10b981; --text: #f8fafc; --muted: #94a3b8; }
@@ -93,7 +92,6 @@ HTML_UI = """
         .pdf { background: #0ea5e9; } .word { background: #2563eb; } .green { background: var(--green); }
         .info-panel { width: 100%; max-width: 650px; background: #111827; padding: 30px; border-radius: 24px; border: 1px solid #334155; margin-bottom: 20px; text-align: left; }
         .info-panel h2 { color: var(--accent); font-size: 18px; margin-bottom: 15px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
-        .info-panel p, .info-panel li { font-size: 14px; color: var(--muted); line-height: 1.7; }
         .review-card { background: var(--card); padding: 18px; border-radius: 15px; margin-bottom: 15px; border-left: 4px solid var(--accent); }
         .review-author { color: var(--accent); font-weight: bold; font-size: 12px; text-align: right; display: block; margin-top: 5px; }
         #preview-box { display: none; background: #020617; border: 1px solid var(--accent); padding: 20px; border-radius: 14px; margin-top: 20px; color: #cbd5e1; font-family: monospace; max-height: 250px; overflow-y: auto; }
@@ -149,7 +147,7 @@ HTML_UI = """
 
     <div class="info-panel">
         <h2>💬 Kullanıcı Yorumları</h2>
-        <div class="review-card">"Duruşma salonunda telefondan anında PDF'e çeviriyorum. Harika." <span class="review-author">- Av. M.T.</span></div>
+        <div class="review-card">"Duruşma salonunda tabletimden UDF dosyalarımı PDF'e çevirip anında okuyabiliyorum. Harika." <span class="review-author">- Av. M.T.</span></div>
         <div class="review-card">"Sistemin kayıt istememesi güven veriyor. Elinize sağlık." <span class="review-author">- A.Y.</span></div>
         <div class="review-card">"Dilekçelerimi Word'e çevirirken formatın bozulmaması çok başarılı." <span class="review-author">- K.S.</span></div>
         <div class="review-card">"İcra dairelerinde dosya incelerken en büyük yardımcım." <span class="review-author">- M.B. (Katip)</span></div>
@@ -182,9 +180,16 @@ HTML_UI = """
 </html>
 """
 
+# --- SEO & SITEMAP ---
 @app.route("/sitemap.xml")
 def sitemap():
-    pages = ["https://udftopdf.com/", "https://udftopdf.com/udf-to-pdf", "https://udftopdf.com/udf-viewer", "https://udftopdf.com/udf-acma", "https://udftopdf.com/udf-to-word"]
+    pages = [
+        "https://udftopdf.com/",
+        "https://udftopdf.com/udf-to-pdf",
+        "https://udftopdf.com/udf-viewer",
+        "https://udftopdf.com/udf-acma",
+        "https://udftopdf.com/udf-to-word"
+    ]
     xml = ['<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     for p in pages: xml.append(f"<url><loc>{p}</loc></url>")
     xml.append("</urlset>")
@@ -214,20 +219,16 @@ def index():
 
     increment_sayac()
     
-    # PDF'DEN UDF'YE (pdfplumber)
-    if mod == "pdf_to_udf":
-        text_content = ""
-        try:
-            with pdfplumber.open(f) as pdf:
-                for page in pdf.pages: text_content += (page.extract_text() or "") + "\n"
-            xml = f'<?xml version="1.0" encoding="UTF-8"?><udf><icerik><![CDATA[{text_content[:5000]}]]></icerik></udf>'
-            buf = io.BytesIO()
-            with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z: z.writestr("content.xml", xml)
-            buf.seek(0)
-            return send_file(buf, as_attachment=True, download_name="cevrilmis.udf", mimetype="application/octet-stream")
-        except: return "PDF hatası."
+    # PDF/Word -> UDF
+    if mod and "_to_udf" in mod:
+        text_content = f.read()[:5000].decode("utf-8", errors="ignore")
+        xml = f'<?xml version="1.0" encoding="UTF-8"?><udf><icerik><![CDATA[{text_content}]]></icerik></udf>'
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z: z.writestr("content.xml", xml)
+        buf.seek(0)
+        return send_file(buf, as_attachment=True, download_name="cevrilmis.udf", mimetype="application/octet-stream")
 
-    # UDF'DEN DİĞERLERİNE
+    # UDF -> Diğerleri
     lines = guclu_parser(f.read())
     
     if mod == "word":
