@@ -80,11 +80,8 @@ HTML_UI = """
         .active { opacity: 1 !important; pointer-events: auto !important; }
         .pdf { background: #0ea5e9; } .word { background: #2b579a; } .preview-btn-ui { background: #10b981; grid-column: span 2; }
         .info-panel { width: 100%; max-width: 600px; background: #111827; padding: 25px; border-radius: 20px; border: 1px solid #334155; margin-bottom: 20px; font-size: 14px; line-height: 1.6; color: #94a3b8; text-align: left; }
-        
-        /* Önizleme Alanı */
         #preview-box { display: none; background: #020617; border: 1px solid #38bdf8; padding: 15px; border-radius: 10px; margin-top: 20px; text-align: left; max-height: 250px; overflow-y: auto; color: #cbd5e1; font-family: monospace; font-size: 12px; white-space: pre-wrap; }
         .preview-title { color: #10b981; font-weight: bold; margin-bottom: 10px; display: block; border-bottom: 1px solid #1e293b; }
-
         .review-box { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid #38bdf8; }
         .review-text { font-style: italic; color: #cbd5e1; font-size: 13px; }
         .review-author { color: #f8fafc; font-weight: bold; font-size: 12px; margin-top: 5px; text-align: right; }
@@ -98,26 +95,21 @@ HTML_UI = """
     <div class="box">
         <h1>UDF Dönüştürücü</h1>
         <div class="stats-badge">🚀 Toplam {{ current_sayac }} güvenli işlem tamamlandı.</div>
-        
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
             <input type="file" name="file" id="fileInput" accept=".udf, .pdf, .docx, .txt" required style="width:100%; margin-bottom:15px; color: #94a3b8;">
-            
             <label style="font-size: 12px; display: block; margin-bottom: 15px; cursor: pointer;">
                 <input type="checkbox" id="kvkk" onchange="toggleBtns()"> KVKK Aydınlatma Metnini onaylıyorum.
             </label>
-
             <div class="btn-group">
                 <button type="button" id="btnPreview" class="preview-btn-ui" onclick="getPreview()">🔍 DOSYA ÖNİZLE</button>
                 <button type="submit" name="mod" value="pdf" id="btn1" class="pdf">UDF ➔ PDF</button>
                 <button type="submit" name="mod" value="word" id="btn2" class="word">UDF ➔ WORD</button>
             </div>
-
             <div id="preview-box">
                 <span class="preview-title">📄 Belge Önizlemesi (İlk 500 Karakter):</span>
                 <div id="preview-content"></div>
             </div>
         </form>
-
         <div style="margin-top:25px; font-size:13px; color:#94a3b8; border-top:1px solid #334155; padding-top:15px;">
             🤝 <b>İşbirliği:</b> <a href="mailto:mertfatih1975@gmail.com" class="contact-link">mertfatih1975@gmail.com</a> | 
             <a href="tel:+905327641661" class="contact-link">0532 764 16 61</a>
@@ -126,12 +118,11 @@ HTML_UI = """
 
     <div class="info-panel">
         <h2><span>💬 Kullanıcı Yorumları</span><a href="mailto:mertfatih1975@gmail.com?subject=Yeni Yorum" class="review-btn">+ Yorum Yap</a></h2>
-        
         <div class="review-box"><div class="review-text">"Duruşma öncesi telefonumdan anında PDF'e çeviriyorum. Program kurmaya gerek kalmıyor."</div><div class="review-author">- Av. M.T.</div></div>
         <div class="review-box"><div class="review-text">"Sistemin kayıt istememesi ve dosyaları hemen silmesi güven veriyor."</div><div class="review-author">- A.Y.</div></div>
         <div class="review-box"><div class="review-text">"UDF dosyalarını Word formatına çevirmek için harika bir araç."</div><div class="review-author">- K.S.</div></div>
         <div class="review-box"><div class="review-text">"Baro kartla giriş yapamadığım anlarda hayat kurtarıyor."</div><div class="review-author">- Av. S.G.</div></div>
-        <div class="review-box"><div class="review-text">"İcra katipliği yapıyorum, her gün onlarca UDF'yi PDF yapmam gerekiyor. Çok hızlı."</div><div class="review-author">- M.B. (İcra Katibi)</div></div>
+        <div class="review-box"><div class="review-text">"İcra katipliği yapıyorum, her gün onlarca UDF'yi PDF yapmam gerekiyor. Çok hızlı."</div><div class="review-author">- M.B. (Katip)</div></div>
         <div class="review-box"><div class="review-text">"Vatandaş portalından indirdiğim kararları telefonumda açabildim, teşekkürler."</div><div class="review-author">- H.K.</div></div>
         <div class="review-box"><div class="review-text">"PDF'ten UDF'ye çevirme özelliği sayesinde dilekçelerimi UYAP'a uyumlu hale getiriyorum."</div><div class="review-author">- Stj. Av. C.D.</div></div>
         <div class="review-box"><div class="review-text">"Ofis dışında acil evrak gelince direkt cepten hallediyoruz. Elinize sağlık."</div><div class="review-author">- Av. Z.F.</div></div>
@@ -151,28 +142,21 @@ HTML_UI = """
                 else b.classList.remove('active');
             });
         }
-
         async function getPreview() {
             const fileInput = document.getElementById('fileInput');
             if (!fileInput.files[0]) return alert("Lütfen önce bir dosya seçin.");
-            
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
             formData.append('mod', 'preview');
-
             const previewBox = document.getElementById('preview-box');
             const previewContent = document.getElementById('preview-content');
-            
             previewContent.innerText = "Yükleniyor...";
             previewBox.style.display = "block";
-
             try {
                 const response = await fetch('/', { method: 'POST', body: formData });
                 const text = await response.text();
                 previewContent.innerText = text;
-            } catch (e) {
-                previewContent.innerText = "Önizleme alınamadı.";
-            }
+            } catch (e) { previewContent.innerText = "Önizleme alınamadı."; }
         }
     </script>
 </body>
