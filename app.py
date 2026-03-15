@@ -36,35 +36,60 @@ def increment_sayac():
         pass
     return count
 
-# --- UDF PARSER ---
+# --- ZIRHLI UDF PARSER (Geliştirilmiş Versiyon) ---
 def guclu_parser(data):
     try:
+        # 1. Standart ZIP Yapısını Dene
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as z:
                 for name in z.namelist():
                     if name.lower().endswith(".xml"):
-                        with z.open(name) as f: return parse_xml_to_lines(f.read())
+                        with z.open(name) as f: 
+                            return parse_xml_to_lines(f.read())
         except: pass
+
+        # 2. Ham ZLIB Akışlarını Ara (UDF Karakteristiği)
         sigs = [b'\x78\x9c', b'\x78\xda', b'\x78\x01']
         for sig in sigs:
             pos = data.find(sig)
             while pos != -1:
                 try:
                     decompressed = zlib.decompress(data[pos:])
-                    if b"<" in decompressed: return parse_xml_to_lines(decompressed)
+                    if b"<" in decompressed: 
+                        return parse_xml_to_lines(decompressed)
                 except: pass
                 pos = data.find(sig, pos + 1)
-        return ["İçerik ayrıştırılamadı."]
-    except: return ["Hata oluştu."]
+
+        # 3. ACİL DURUM: Regex ile Ham Metin Ayıklama (Fallback)
+        raw_text = data.decode("utf-8", errors="ignore")
+        found = re.findall(r'>([^<]{10,})<', raw_text)
+        if found:
+            return [line.strip() for line in found if len(line.strip()) > 2]
+
+        return ["⚠️ Dosya içeriği ayrıştırılamadı. Dosya bozuk veya şifreli olabilir."]
+    except Exception as e: 
+        return [f"⚠️ Sistem Hatası: {str(e)}"]
 
 def parse_xml_to_lines(xml_content):
     try:
         xml_str = xml_content.decode("utf-8", errors="ignore")
         xml_str = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', xml_str)
-        root = ET.fromstring(xml_str)
-        lines = [" ".join(elem.text.split()) for elem in root.iter() if elem.text and len(elem.text.strip()) > 1]
-        return lines if lines else [re.sub(r'<[^>]+>', ' ', xml_str).strip()]
-    except: return ["XML hatası."]
+        
+        try:
+            root = ET.fromstring(xml_str)
+            lines = []
+            for elem in root.iter():
+                if elem.text and len(elem.text.strip()) > 1:
+                    clean_line = " ".join(elem.text.split())
+                    lines.append(clean_line)
+            if lines: return lines
+        except: pass
+
+        # XML Yapısı bozuksa Regex ile ayıkla
+        lines = re.findall(r'[^>]+(?=<)', xml_str)
+        return [l.strip() for l in lines if len(l.strip()) > 2]
+    except:
+        return ["⚠️ XML okuma hatası."]
 
 # --- UI TASARIMI ---
 HTML_UI = """
@@ -155,18 +180,17 @@ HTML_UI = """
 
     <div class="info-panel">
         <h2>⚖️ UDF (UYAP Doküman Formatı) Bilgilendirme</h2>
-        <p><b>UDF dosyaları</b>, UYAP kapsamında resmi evrakların bütünlüğünü sağlayan özel bir dosya yapısıdır. Standart yazılımlarla doğrudan görüntülenemezler.</p>
-        <p>Bu portal, hukuk profesyonellerinin ve vatandaşların bu belgelere her cihazdan kolayca erişebilmesini sağlar.</p>
+        <p><b>UDF dosyaları</b>, UYAP kapsamında resmi evrakların bütünlüğünü sağlayan özel bir dosya yapısıdır. Standart yazılımlarla doğrudan görüntülenemezler. Bu portal, hukuk profesyonellerinin ve vatandaşların bu belgelere her cihazdan kolayca erişebilmesini sağlar.</p>
     </div>
 
     <div class="info-panel">
         <h2><span>💬 Kullanıcı Deneyimleri</span><a href="mailto:mertfatih1975@gmail.com?subject=Yeni Yorum" class="review-btn">+ Yorum Yaz</a></h2>
-        <div class="review-box"><div class="review-text">"Duruşma salonunda tabletimden UDF dosyalarımı PDF'e çevirip anında okuyabiliyorum."</div><div class="review-author">- Av. M.T.</div></div>
-        <div class="review-box"><div class="review-text">"Kayıt zorunluluğu olmaması ve dosyaların anında silinmesi güven verici."</div><div class="review-author">- A.Y.</div></div>
+        <div class="review-box"><div class="review-text">"Duruşma salonunda tabletimden UDF dosyalarımı PDF'e çevirip anında okuyabiliyorum. Muazzam bir hız."</div><div class="review-author">- Av. M.T.</div></div>
+        <div class="review-box"><div class="review-text">"Kayıt zorunluluğu olmaması ve dosyaların anında silinmesi güven verici. Harika bir iş."</div><div class="review-author">- A.Y.</div></div>
         <div class="review-box"><div class="review-text">"İcra dairelerinde dosya incelerken en büyük yardımcım bu site."</div><div class="review-author">- M.B. (Katip)</div></div>
         <div class="review-box"><div class="review-text">"Mobil uyumu çok başarılı, telefonumdan her türlü UYAP evrakını açabiliyorum."</div><div class="review-author">- Av. S.G.</div></div>
-        <div class="review-box"><div class="review-text">"Ücretsiz ve reklamsız olması büyük bir avantaj."</div><div class="review-author">- Av. E.O.</div></div>
-        <div class="review-box"><div class="review-text">"Güvenlik protokolü metni beni ikna etti, hassasiyet çok yerinde."</div><div class="review-author">- D.M.</div></div>
+        <div class="review-box"><div class="review-text">"Ücretsiz ve reklamsız olması büyük bir avantaj. Teşekkürler."</div><div class="review-author">- Av. E.O.</div></div>
+        <div class="review-box"><div class="review-text">"Güvenlik protokolü metni beni ikna etti, gizlilik hassasiyeti çok yerinde."</div><div class="review-author">- D.M.</div></div>
     </div>
 
     <script>
@@ -218,7 +242,7 @@ HTML_UI = """
 
 @app.route("/", methods=["GET","POST"])
 def index():
-    now = datetime.now(pytz.timezone('Europe/Istanbul'))
+    tz = pytz.timezone('Europe/Istanbul')
     if request.method == "GET":
         sayac = get_sayac()
         return render_template_string(HTML_UI, current_sayac=f"{sayac:,}".replace(',', '.'))
@@ -226,6 +250,7 @@ def index():
     f = request.files.get("file")
     mod = request.form.get("mod")
     
+    # --- ÖNİZLEME (PREVIEW) ---
     if mod == "preview":
         if not f: return "Dosya seçilmedi."
         try:
@@ -236,6 +261,7 @@ def index():
 
     increment_sayac()
     
+    # FORMATI UDF'YE ÇEVİRME
     if mod and "to_udf" in mod:
         text_content = ""
         try:
@@ -259,6 +285,7 @@ def index():
             return send_file(buf, as_attachment=True, download_name="cevrilmis.udf", mimetype="application/zip")
         except Exception as e: return Response(f"Hata: {str(e)}")
 
+    # UDF'YI DİĞER FORMATLARA ÇEVİRME
     lines = guclu_parser(f.read())
     text = "\n".join(lines)
     
