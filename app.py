@@ -70,46 +70,62 @@ HTML_UI = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title }}</title>
+    <title>UDFTOPDF | Ücretsiz Çevirici</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .box { background: #1e293b; padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 600px; border: 1px solid #334155; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .stats-badge { background: rgba(56, 189, 248, 0.1); color: #38bdf8; padding: 10px; border-radius: 10px; font-size: 14px; margin-bottom: 20px; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: bold; }
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        button { border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; opacity: 0.3; pointer-events: none; font-size: 13px; }
+        .section-title { font-size: 13px; font-weight: bold; margin: 15px 0 5px 0; display: block; text-align: left; }
+        .t-down { color: #38bdf8; } .t-up { color: #10b981; }
+        button { border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; opacity: 0.3; pointer-events: none; font-size: 12px; }
         .active { opacity: 1 !important; pointer-events: auto !important; }
-        .pdf { background: #0ea5e9; } .word { background: #2b579a; } .preview-btn-ui { background: #10b981; grid-column: span 2; }
+        .pdf { background: #0ea5e9; } .word { background: #2b579a; } .txt { background: #64748b; } .jpeg { background: #f59e0b; }
+        .pdf-u { background: #0284c7; } .word-u { background: #1e3a8a; } .txt-u { background: #475569; } .jpeg-u { background: #d97706; }
+        .preview-btn-ui { background: #10b981; grid-column: span 2; margin-bottom: 10px; }
         .info-panel { width: 100%; max-width: 600px; background: #111827; padding: 25px; border-radius: 20px; border: 1px solid #334155; margin-bottom: 20px; font-size: 14px; line-height: 1.6; color: #94a3b8; text-align: left; }
-        #preview-box { display: none; background: #020617; border: 1px solid #38bdf8; padding: 15px; border-radius: 10px; margin-top: 20px; text-align: left; max-height: 250px; overflow-y: auto; color: #cbd5e1; font-family: monospace; font-size: 12px; white-space: pre-wrap; }
-        .preview-title { color: #10b981; font-weight: bold; margin-bottom: 10px; display: block; border-bottom: 1px solid #1e293b; }
+        #preview-box { display: none; background: #020617; border: 1px solid #38bdf8; padding: 15px; border-radius: 10px; margin-top: 20px; max-height: 200px; overflow-y: auto; color: #cbd5e1; font-family: monospace; font-size: 12px; white-space: pre-wrap; }
         .review-box { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid #38bdf8; }
-        .review-text { font-style: italic; color: #cbd5e1; font-size: 13px; }
+        .review-text { font-style: italic; color: #cbd5e1; }
         .review-author { color: #f8fafc; font-weight: bold; font-size: 12px; margin-top: 5px; text-align: right; }
         .contact-link { color: #38bdf8; text-decoration: none; font-weight: bold; }
-        .review-btn { background: #38bdf8; color: #0f172a; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 11px; font-weight: bold; float: right; }
-        h1 { color:#38bdf8; font-size: 24px; }
-        h2 { color:#e2e8f0; font-size: 18px; margin-bottom: 15px; }
+        .review-btn { background: #38bdf8; color: #0f172a; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 11px; float: right; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="box">
         <h1>UDF Dönüştürücü</h1>
         <div class="stats-badge">🚀 Toplam {{ current_sayac }} güvenli işlem tamamlandı.</div>
+        
         <form id="uForm" method="POST" action="/" enctype="multipart/form-data">
-            <input type="file" name="file" id="fileInput" accept=".udf, .pdf, .docx, .txt" required style="width:100%; margin-bottom:15px; color: #94a3b8;">
+            <input type="file" name="file" id="fileInput" required style="width:100%; margin-bottom:15px; color: #94a3b8;">
             <label style="font-size: 12px; display: block; margin-bottom: 15px; cursor: pointer;">
                 <input type="checkbox" id="kvkk" onchange="toggleBtns()"> KVKK Aydınlatma Metnini onaylıyorum.
             </label>
+
+            <button type="button" id="btnPreview" class="preview-btn-ui" onclick="getPreview()">🔍 DOSYA ÖNİZLE</button>
+
+            <span class="section-title t-down">⬇️ UDF'den Çevir</span>
             <div class="btn-group">
-                <button type="button" id="btnPreview" class="preview-btn-ui" onclick="getPreview()">🔍 DOSYA ÖNİZLE</button>
-                <button type="submit" name="mod" value="pdf" id="btn1" class="pdf">UDF ➔ PDF</button>
-                <button type="submit" name="mod" value="word" id="btn2" class="word">UDF ➔ WORD</button>
+                <button type="submit" name="mod" value="pdf" id="b1" class="pdf">UDF ➔ PDF</button>
+                <button type="submit" name="mod" value="word" id="b2" class="word">UDF ➔ WORD</button>
+                <button type="submit" name="mod" value="txt" id="b3" class="txt">UDF ➔ TXT</button>
+                <button type="submit" name="mod" value="jpeg" id="b4" class="jpeg">UDF ➔ JPEG</button>
             </div>
+
+            <span class="section-title t-up">⬆️ UDF'ye Çevir (Tersine)</span>
+            <div class="btn-group">
+                <button type="submit" name="mod" value="pdf_to_udf" id="b5" class="pdf-u">PDF ➔ UDF</button>
+                <button type="submit" name="mod" value="word_to_udf" id="b6" class="word-u">WORD ➔ UDF</button>
+                <button type="submit" name="mod" value="txt_to_udf" id="b7" class="txt-u">TXT ➔ UDF</button>
+                <button type="submit" name="mod" value="jpeg_to_udf" id="b8" class="jpeg-u">JPEG ➔ UDF</button>
+            </div>
+
             <div id="preview-box">
-                <span class="preview-title">📄 Belge Önizlemesi (İlk 500 Karakter):</span>
                 <div id="preview-content"></div>
             </div>
         </form>
+
         <div style="margin-top:25px; font-size:13px; color:#94a3b8; border-top:1px solid #334155; padding-top:15px;">
             🤝 <b>İşbirliği:</b> <a href="mailto:mertfatih1975@gmail.com" class="contact-link">mertfatih1975@gmail.com</a> | 
             <a href="tel:+905327641661" class="contact-link">0532 764 16 61</a>
@@ -118,17 +134,17 @@ HTML_UI = """
 
     <div class="info-panel">
         <h2><span>💬 Kullanıcı Yorumları</span><a href="mailto:mertfatih1975@gmail.com?subject=Yeni Yorum" class="review-btn">+ Yorum Yap</a></h2>
-        <div class="review-box"><div class="review-text">"Duruşma öncesi telefonumdan anında PDF'e çeviriyorum. Program kurmaya gerek kalmıyor."</div><div class="review-author">- Av. M.T.</div></div>
-        <div class="review-box"><div class="review-text">"Sistemin kayıt istememesi ve dosyaları hemen silmesi güven veriyor."</div><div class="review-author">- A.Y.</div></div>
-        <div class="review-box"><div class="review-text">"UDF dosyalarını Word formatına çevirmek için harika bir araç."</div><div class="review-author">- K.S.</div></div>
+        <div class="review-box"><div class="review-text">"Duruşma öncesi telefondan anında PDF'e çeviriyorum."</div><div class="review-author">- Av. M.T.</div></div>
+        <div class="review-box"><div class="review-text">"Sistemin kayıt istememesi ve dosyaları silmesi güven veriyor."</div><div class="review-author">- A.Y.</div></div>
+        <div class="review-box"><div class="review-text">"UDF dosyalarını Word formatına çevirmek için harika."</div><div class="review-author">- K.S.</div></div>
         <div class="review-box"><div class="review-text">"Baro kartla giriş yapamadığım anlarda hayat kurtarıyor."</div><div class="review-author">- Av. S.G.</div></div>
-        <div class="review-box"><div class="review-text">"İcra katipliği yapıyorum, her gün onlarca UDF'yi PDF yapmam gerekiyor. Çok hızlı."</div><div class="review-author">- M.B. (Katip)</div></div>
-        <div class="review-box"><div class="review-text">"Vatandaş portalından indirdiğim kararları telefonumda açabildim, teşekkürler."</div><div class="review-author">- H.K.</div></div>
-        <div class="review-box"><div class="review-text">"PDF'ten UDF'ye çevirme özelliği sayesinde dilekçelerimi UYAP'a uyumlu hale getiriyorum."</div><div class="review-author">- Stj. Av. C.D.</div></div>
-        <div class="review-box"><div class="review-text">"Ofis dışında acil evrak gelince direkt cepten hallediyoruz. Elinize sağlık."</div><div class="review-author">- Av. Z.F.</div></div>
-        <div class="review-box"><div class="review-text">"Dosya boyutu kısıtlaması olmaması çok iyi. Büyük dosyaları bile çeviriyor."</div><div class="review-author">- H.A.</div></div>
+        <div class="review-box"><div class="review-text">"İcra katipliği yapıyorum, her gün onlarca UDF çeviriyorum."</div><div class="review-author">- M.B. (Katip)</div></div>
+        <div class="review-box"><div class="review-text">"Vatandaş portalından indirdiğim kararları telefonumda açabildim."</div><div class="review-author">- H.K.</div></div>
+        <div class="review-box"><div class="review-text">"PDF'ten UDF'ye çevirme özelliği sayesinde dilekçelerimi hazırlıyorum."</div><div class="review-author">- Stj. Av. C.D.</div></div>
+        <div class="review-box"><div class="review-text">"Ofis dışında acil evrak gelince direkt cepten hallediyoruz."</div><div class="review-author">- Av. Z.F.</div></div>
+        <div class="review-box"><div class="review-text">"Dosya boyutu kısıtlaması olmaması çok iyi."</div><div class="review-author">- H.A.</div></div>
         <div class="review-box"><div class="review-text">"UYAP editörüyle uğraşmaktansa burada çevirmek çok daha pratik."</div><div class="review-author">- Av. B.R.</div></div>
-        <div class="review-box"><div class="review-text">"Basit, hızlı ve ücretsiz. Favorilerime ekledim bile."</div><div class="review-author">- E.S.</div></div>
+        <div class="review-box"><div class="review-text">"Basit, hızlı ve ücretsiz. Favorilerime ekledim."</div><div class="review-author">- E.S.</div></div>
         <div class="review-box"><div class="review-text">"Word'e çevirirken yazıların kaymaması çok başarılı."</div><div class="review-author">- Av. E.O.</div></div>
         <div class="review-box"><div class="review-text">"Kişisel verilerin hemen silinmesi beni ikna eden en büyük özellik."</div><div class="review-author">- D.M.</div></div>
     </div>
@@ -136,27 +152,26 @@ HTML_UI = """
     <script>
         function toggleBtns() {
             const isChecked = document.getElementById('kvkk').checked;
-            ['btn1','btn2','btnPreview'].forEach(id => {
+            const bIds = ['b1','b2','b3','b4','b5','b6','b7','b8','btnPreview'];
+            bIds.forEach(id => {
                 const b = document.getElementById(id);
-                if(isChecked) b.classList.add('active');
-                else b.classList.remove('active');
+                if(b) {
+                    if(isChecked) b.classList.add('active');
+                    else b.classList.remove('active');
+                }
             });
         }
         async function getPreview() {
-            const fileInput = document.getElementById('fileInput');
-            if (!fileInput.files[0]) return alert("Lütfen önce bir dosya seçin.");
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-            formData.append('mod', 'preview');
-            const previewBox = document.getElementById('preview-box');
-            const previewContent = document.getElementById('preview-content');
-            previewContent.innerText = "Yükleniyor...";
-            previewBox.style.display = "block";
+            const fIn = document.getElementById('fileInput');
+            if (!fIn.files[0]) return alert("Dosya seç!");
+            const fd = new FormData(); fd.append('file', fIn.files[0]); fd.append('mod', 'preview');
+            const pB = document.getElementById('preview-box');
+            const pC = document.getElementById('preview-content');
+            pC.innerText = "Okunuyor..."; pB.style.display = "block";
             try {
-                const response = await fetch('/', { method: 'POST', body: formData });
-                const text = await response.text();
-                previewContent.innerText = text;
-            } catch (e) { previewContent.innerText = "Önizleme alınamadı."; }
+                const r = await fetch('/', { method: 'POST', body: fd });
+                const t = await r.text(); pC.innerText = t;
+            } catch (e) { pC.innerText = "Hata!"; }
         }
     </script>
 </body>
@@ -168,9 +183,7 @@ def index():
     now = datetime.now(pytz.timezone('Europe/Istanbul'))
     if request.method == "GET":
         sayac = get_sayac()
-        return render_template_string(HTML_UI, 
-            current_sayac=f"{sayac:,}".replace(',', '.'),
-            page_title="UDFTOPDF | Önizlemeli Ücretsiz Çevirici")
+        return render_template_string(HTML_UI, current_sayac=f"{sayac:,}".replace(',', '.'))
     
     f = request.files.get("file")
     mod = request.form.get("mod")
@@ -178,16 +191,45 @@ def index():
     if mod == "preview":
         try:
             lines = guclu_parser(f.read())
-            full_text = " ".join(lines)
-            return full_text[:500] + "..."
-        except: return "Önizleme alınamadı."
+            return " ".join(lines)[:500] + "..."
+        except: return "Önizleme başarısız."
 
     increment_sayac()
+    
+    # TERSİNE ÇEVİRME MANTIĞI (PDF/WORD/TXT -> UDF)
+    if mod and "to_udf" in mod:
+        text_content = ""
+        try:
+            if mod == "pdf_to_udf":
+                import PyPDF2
+                reader = PyPDF2.PdfReader(f)
+                for page in reader.pages: text_content += (page.extract_text() or "") + "\n"
+            elif mod == "word_to_udf":
+                import docx
+                doc = docx.Document(f)
+                text_content = "\n".join([p.text for p in doc.paragraphs])
+            elif mod == "txt_to_udf":
+                text_content = f.read().decode("utf-8", errors="ignore")
+            elif mod == "jpeg_to_udf":
+                return Response("OCR Modülü Yakında!", mimetype="text/plain")
+
+            safe_text = text_content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            html_c = f'<html><body><p>{safe_text.replace(chr(10), "<br>")}</p></body></html>'
+            udf_xml = f'<?xml version="1.0" encoding="UTF-8"?><uyap><icerik><![CDATA[{html_c}]]></icerik></uyap>'
+            buf = io.BytesIO()
+            with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf: zf.writestr('content.xml', udf_xml.encode('utf-8'))
+            buf.seek(0)
+            return send_file(buf, as_attachment=True, download_name="cevrilmis.udf", mimetype="application/zip")
+        except Exception as e: return Response(f"Hata: {str(e)}")
+
+    # UDF -> DİĞER FORMATLAR
+    if mod == "jpeg": return Response("JPEG Çevirici Yükleniyor...", mimetype="text/plain")
+    
     lines = guclu_parser(f.read())
     text = "\n".join(lines)
     
-    if mod == "word":
-        return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.doc", mimetype="application/msword")
+    if mod == "txt": return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.txt", mimetype="text/plain")
+    if mod == "word": return send_file(io.BytesIO(text.encode("utf-8")), as_attachment=True, download_name="belge.doc", mimetype="application/msword")
     
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
